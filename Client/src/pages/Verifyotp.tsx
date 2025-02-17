@@ -1,16 +1,18 @@
 import { useEffect, useState, useContext, useMemo } from "react";
 import SignupContext from '../Context/Signupcontext';
 import axios from 'axios';
-import { useNavigate } from "react-router";
+import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import nacl from "tweetnacl";
 import naclUtil from "tweetnacl-util";
 import bcrypt from "bcryptjs";
+import LoginContext from "../Context/Logincontext";
 
 const Verifyotp = () => {
     const [otp, setOtp] = useState(Array(6).fill(""));
     const [load, setLoad] = useState(false);
     const creadentials = useContext(SignupContext);
+    const logincontext = useContext(LoginContext);
     const Navigate = useNavigate();
     const sendotp = useMemo(() => {
         return Math.floor(100000 + Math.random() * 900000).toString();
@@ -32,14 +34,14 @@ const Verifyotp = () => {
     };
 
     useEffect(() => {
-        const otpsender = async () => {
 
+        const otpsender = async () => {
             try {
                 const response = await axios.post(
                     'https://api.brevo.com/v3/smtp/email',
                     {
                         sender: { name: 'Chatthisway', email: 'deployment0007@gmail.com' },
-                        to: [{ email: creadentials?.credentials.email }],
+                        to: [{ email: logincontext?.usermail }],
                         subject: `Chatthisway - OTP Code`,
                         htmlContent: `
                     <p>Don't share this code with anyone.</p> 
@@ -48,13 +50,12 @@ const Verifyotp = () => {
                     },
                     {
                         headers: {
-                            // 'api-key': import.meta.env.VITE_BREVO_API_KEY,
+                            'api-key': import.meta.env.VITE_BREVO_API_KEY,
                             'Content-Type': 'application/json',
                         },
                     }
                 );
                 if (response.status === 201) {
-                    console.log('OTP sent successfully');
                     return response;
                 }
             } catch (error) {
@@ -76,7 +77,6 @@ const Verifyotp = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoad(true);
-        console.log(otp.join(""), sendotp.toString());
         setOtp(Array(6).fill(""));
         if (otp.join("") !== sendotp.toString()) {
             toast('Incorrect Otp', {
@@ -91,66 +91,68 @@ const Verifyotp = () => {
             });
             setLoad(false);
         }
-        else {
-            const generateSigningKeyPair = async () => {
-                const keyPair = nacl.sign.keyPair();
-                return {
-                    publicKey: naclUtil.encodeBase64(keyPair.publicKey), // Share this
-                    privateKey: naclUtil.encodeBase64(keyPair.secretKey), // Keep this secret
+        if (creadentials?.credentials.username === "" && otp.join("") === sendotp.toString()) {
+            Navigate(`/resetpass/${logincontext?.usermail}`);
+        } else {
+            if (otp.join("") === sendotp.toString() && creadentials?.credentials.username !== "") {
+                const generateSigningKeyPair = async () => {
+                    const keyPair = nacl.sign.keyPair();
+                    return {
+                        publicKey: naclUtil.encodeBase64(keyPair.publicKey),
+                        privateKey: naclUtil.encodeBase64(keyPair.secretKey),
+                    };
                 };
-            };
-            const generatecryptoKeyPair = async () => {
-                const keyPair = nacl.box.keyPair();
-                return {
-                    publicKey: naclUtil.encodeBase64(keyPair.publicKey),
-                    privateKey: naclUtil.encodeBase64(keyPair.secretKey),
+                const generatecryptoKeyPair = async () => {
+                    const keyPair = nacl.box.keyPair();
+                    return {
+                        publicKey: naclUtil.encodeBase64(keyPair.publicKey),
+                        privateKey: naclUtil.encodeBase64(keyPair.secretKey),
+                    };
                 };
-            };
-            async function hashPassword(password: string) {
-                const salt = await bcrypt.genSalt(10);  // Generate salt
-                const hashedPassword = await bcrypt.hash(password, salt); // Hash password
-                console.log("Hashed Password:", hashedPassword);
-                return hashedPassword;
+                async function hashPassword(password: string) {
+                    const salt = await bcrypt.genSalt(10);
+                    const hashedPassword = await bcrypt.hash(password, salt);
+                    return hashedPassword;
+                }
+
+                const hashedPassword = await hashPassword(creadentials?.credentials.password ? creadentials?.credentials.password : "")
+                const signingKeyPair = await generateSigningKeyPair();
+                const cryptoKeyPair = await generatecryptoKeyPair();
+
+                const dbRequest = indexedDB.open("Credentials", 1);
+
+                dbRequest.onupgradeneeded = function () {
+                    const db = dbRequest.result;
+                    db.createObjectStore("users", { keyPath: "id" });
+                };
+
+                dbRequest.onsuccess = function () {
+                    const db = dbRequest.result;
+                    const tx = db.transaction("users", "readwrite");
+                    const store = tx.objectStore("users");
+                    store.put({ id: 1, cryptokey: cryptoKeyPair?.privateKey, signinkey: signingKeyPair?.privateKey });
+                };
+
+                try {
+                    await axios.post('http://localhost:8080/api/createuser', {
+                        username: creadentials?.credentials?.username || "",
+                        email: creadentials?.credentials?.email || "",
+                        cryptokey: cryptoKeyPair?.publicKey || "",
+                        signinkey: signingKeyPair?.publicKey || "",
+                        password: hashedPassword || "",
+                        fname: creadentials?.credentials?.fname || "",
+
+                    }, {
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
+                } catch (error: any) {
+                    console.error("Error creating user:", error.response?.data || error.message);
+                }
+
+                Navigate(`/dashboard/${creadentials?.credentials.username}`);
             }
-
-            const hashedPassword = await hashPassword(creadentials?.credentials.password ? creadentials?.credentials.password : "")
-            const signingKeyPair = await generateSigningKeyPair();
-            const cryptoKeyPair = await generatecryptoKeyPair();
-
-            const dbRequest = indexedDB.open("Credentials", 1);
-
-            dbRequest.onupgradeneeded = function () {
-                const db = dbRequest.result;
-                db.createObjectStore("users", { keyPath: "id" });
-            };
-
-            dbRequest.onsuccess = function () {
-                const db = dbRequest.result;
-                const tx = db.transaction("users", "readwrite");
-                const store = tx.objectStore("users");
-                store.put({ id: 1, password: hashedPassword, cryptokey: cryptoKeyPair?.privateKey, signinkey: signingKeyPair?.privateKey });
-                console.log("Data stored in IndexedDB!");
-            };
-
-            try {
-                const res = await axios.post('http://localhost:8080/api/createuser', {
-                    username: creadentials?.credentials?.username || "",
-                    email: creadentials?.credentials?.email || "",
-                    cryptokey: cryptoKeyPair?.publicKey || "",
-                    signinkey: signingKeyPair?.publicKey || ""
-                }, {
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                });
-
-                console.log("User created successfully:", res.data);
-            } catch (error: any) {
-                console.error("Error creating user:", error.response?.data || error.message);
-            }
-
-
-            Navigate('/dashboard');
         }
     };
 
@@ -190,6 +192,7 @@ const Verifyotp = () => {
                                     value={otp[index]}
                                     onChange={(e) => handlechange(e, index)}
                                     onKeyDown={(e) => handleKeyDown(e, index)}
+                                    autoFocus={index === 0}
                                 />
                             </div>
                         ))}

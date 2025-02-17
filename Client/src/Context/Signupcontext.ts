@@ -4,7 +4,8 @@ interface credentials {
     email: string,
     username: string,
     password: string,
-    repeatPassword: string
+    repeatPassword: string,
+    fname: string
 }
 
 interface ContextType {

@@ -2,22 +2,38 @@ import mongoose from "mongoose";
 const Schema = mongoose.Schema;
 
 const userSchema = new Schema({
-    email : {
+    email: {
         type: String,
         required: true
     },
-    username : {
+    username: {
         type: String,
         required: true
     },
-    cryptopublickey : {
+    cryptopublickey: {
         type: String,
         required: true
     },
-    signaturepublickey : {
+    fname: {
         type: String,
         required: true
+    },
+    password: {
+        type: String,
+        required: true
+    },
+    signaturepublickey: {
+        type: String,
+        required: true
+    },
+    gender: {
+        type: String,
+        default: ''
+    },
+    description: {
+        type: String,
+        default: ''
     }
-},{timestamps: true});
+}, { timestamps: true });
 
 export default mongoose.model.User || mongoose.model('User', userSchema);

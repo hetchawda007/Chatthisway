@@ -1,18 +1,36 @@
-import { useState, useContext } from "react"
-import { useNavigate, Link } from "react-router"
+import { useState, useContext, useEffect, useRef } from "react"
+import { Link } from "react-router"
+import { useNavigate } from "react-router"
 import { ToastContainer, toast } from "react-toastify"
 import LoginContext from "../Context/Logincontext"
+import SignupContext from "../Context/Signupcontext"
 import axios from "axios"
 import bcrypt from "bcryptjs"
+import { MdOutlineRemoveRedEye } from "react-icons/md";
+import { IoEyeOffOutline } from "react-icons/io5";
 
 const Login = () => {
 
-  const [usermail, setUsermail] = useState('')
-  const [password, setPassword] = useState('')
-  const [matchpass, setMatchpass] = useState('')
+  const [usermail, setUsermail] = useState<string>('')
+  const [password, setPassword] = useState<string>('')
+  const [visible, setVisible] = useState({ visible1: false, visible2: false })
+  const [matchpass, setMatchpass] = useState<boolean>()
   const [load, setLoad] = useState(false)
   const Navigate = useNavigate()
-  const formdata = useContext(LoginContext)
+  const logincontext = useContext(LoginContext)
+  const signupcontext = useContext(SignupContext)
+
+  const ref = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (ref.current) {
+      ref.current.type = visible.visible1 ? "text" : "password";
+    }
+  }, [visible])
+
+  const handlechange = (e: any) => {
+    setVisible({ ...visible, visible1: !visible.visible1 });
+  }
 
   const handleclick = async () => {
 
@@ -43,7 +61,17 @@ const Login = () => {
       setUsermail('')
     }
     else {
-      formdata?.setUsermail(usermail)
+      setLoad(true)
+      const response = await axios.post('http://localhost:8080/api/getemail', {
+        usermail: usermail,
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        validateStatus: () => true
+      })
+
+      logincontext?.setUsermail(response.data.usermail)
       const res = await axios.post('http://localhost:8080/api/auth', {
         usermail: usermail,
       }, {
@@ -52,11 +80,10 @@ const Login = () => {
         },
         validateStatus: () => true
       })
-      if (res.status === 200) {
-        console.log('User found')
+      if (res.data.result === true) {
+        signupcontext?.setCredentials({ email: '', username: '', password: '', repeatPassword: '', fname: '' })
         Navigate('/verifyotp')
       } else {
-        setLoad(true)
         toast('User not found', {
           position: "bottom-center",
           autoClose: 3000,
@@ -68,7 +95,6 @@ const Login = () => {
           theme: "dark",
         });
         setLoad(false)
-        console.log('User not found')
         setUsermail('')
       }
     }
@@ -85,33 +111,8 @@ const Login = () => {
       }
     })
 
-    try {
-      const dbRequest = indexedDB.open("Credentials", 1);
-
-      dbRequest.onsuccess = function () {
-        const db = dbRequest.result;
-        const tx = db.transaction("users", "readonly");
-        const store = tx.objectStore("users");
-
-        const getRequest = store.get(1);
-        getRequest.onsuccess = function () {
-          setMatchpass(getRequest.result.password);
-        };
-      };
-
-      dbRequest.onerror = function () {
-        console.error("Error opening database:", dbRequest.error);
-      };
-    } catch (error) {
-      console.error("Error accessing IndexedDB:", error);
-    }
-
-    const isMatch = await bcrypt.compare(password, matchpass);
-
-    if (res.status === 200 && isMatch) {
-      Navigate('/dashboard')
-    } else {
-      toast('Incorrect username or password', {
+    if (res.data.result === false) {
+      toast('Incorrect username or Email', {
         position: "bottom-center",
         autoClose: 3000,
         hideProgressBar: false,
@@ -123,7 +124,66 @@ const Login = () => {
       });
       setLoad(false)
       setUsermail('')
+    }
+    else if (res.data.result === true) {
+      const res = await axios.post('http://localhost:8080/api/getpass', {
+        usermail: usermail,
+      }, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+      if (res.data.password) {
+        const isMatch = await bcrypt.compare(password, res.data.password);
+        setMatchpass(isMatch);
+        if (isMatch) {
+          Navigate(`/dashboard/${res.data.username}`);
+        } else {
+          toast('Incorrect Password', {
+            position: "bottom-center",
+            autoClose: 3000,
+            hideProgressBar: false,
+            closeOnClick: false,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+            theme: "dark",
+          });
+          setLoad(false);
+          setPassword('');
+        }
+      } else {
+        toast('Error retrieving password', {
+          position: "bottom-center",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: false,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "dark",
+        });
+        setLoad(false);
+      }
+      const isMatch = await bcrypt.compare(password, res.data.password);
+      setMatchpass(isMatch)
+    }
+    else if (!matchpass) {
+      toast('Incorrect Password', {
+        position: "bottom-center",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: false,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "dark",
+      });
+      setLoad(false)
       setPassword('')
+    }
+    else {
+      Navigate('/dashboard')
     }
   }
   return (
@@ -153,11 +213,15 @@ const Login = () => {
 
           <div className="mb-5">
             <label htmlFor="password" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Username or Email</label>
-            <input onChange={(e) => setUsermail(e.target.value)} name='usermail' value={usermail} type="text" id="usermail" className="shadow-xs bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500 dark:shadow-xs-light" placeholder="Johnsmith007 or name@chatthisway.com" required />
+            <input onChange={(e) => setUsermail(e.target.value)} name='usermail' value={usermail || ''} type="text" id="usermail" className="shadow-xs bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500 dark:shadow-xs-light" placeholder="Johnsmith007 or name@chatthisway.com" required />
           </div>
           <div className="mb-5">
             <label htmlFor="password" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Your password</label>
-            <input onChange={(e) => setPassword(e.target.value)} name='password' value={password} type="password" id="password" className="shadow-xs bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500 dark:shadow-xs-light" placeholder="Tqs#F56@sfrw*$ds" required />
+            <div className="flex w-[107%] items-center justify-evenly">
+              <input ref={ref} onChange={(e) => setPassword(e.target.value)} name='password' value={password || ''} type="password" id="password" className="shadow-xs bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500 dark:shadow-xs-light" placeholder="Tqs#F56@sfrw*$ds" required />
+              {visible.visible1 && <MdOutlineRemoveRedEye onClick={handlechange} className="cursor-pointer size-6 relative right-8 text-gray-500 dark:text-gray-400" />}
+              {!visible.visible1 && <IoEyeOffOutline onClick={handlechange} className="cursor-pointer size-6 relative right-8 text-gray-500 dark:text-gray-400" />}
+            </div>
           </div>
 
           <div className="flex items-start mb-5">
