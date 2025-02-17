@@ -7,7 +7,6 @@ router.post('/getemail', async (req, res) => {
     try {
         const username = await User.findOne({ username: req.body.usermail })
         const usermail = await User.findOne({ email: req.body.usermail })
-        console.log(username, usermail)
         if (username) {
             res.send({ usermail: username.email })
         }

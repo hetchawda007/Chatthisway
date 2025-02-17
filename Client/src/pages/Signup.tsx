@@ -7,8 +7,10 @@ import LoginContext from '../Context/Logincontext';
 import axios from 'axios';
 import { MdOutlineRemoveRedEye } from "react-icons/md";
 import { IoEyeOffOutline } from "react-icons/io5";
+import { useGoogleReCaptcha } from "react-google-recaptcha-v3"
 
 const Signup = () => {
+  const { executeRecaptcha } = useGoogleReCaptcha()
   const creadentials = useContext(SignupContext);
   const [load, setLoad] = useState(false)
   const Logincredentials = useContext(LoginContext)
@@ -17,6 +19,7 @@ const Signup = () => {
   const Navigate = useNavigate()
   const ref1 = useRef<HTMLInputElement>(null)
   const ref2 = useRef<HTMLInputElement>(null)
+
 
   useEffect(() => {
     if (ref1.current) {
@@ -42,12 +45,23 @@ const Signup = () => {
   const handlechange2 = () => {
     setVisible({ ...visible, visible2: !visible.visible2 });
   }
-  // const handlechange = (e: any) => {
-  //   setFormData({ ...formData, [e.target.name]: e.target.value })
-  // }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!executeRecaptcha) { return }
+    const token = await executeRecaptcha("submit");
+
+    const res = await axios.post('http://localhost:8080/api/verifyrecaptcha', { token: token }, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+    if (res.data.success === false) {
+      window.location.href = 'https://www.google.com';
+      return
+    }
+
     if (formData.password !== formData.repeatPassword) {
       toast('Passwords do not match', {
         position: "bottom-center",

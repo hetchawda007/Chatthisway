@@ -34,7 +34,7 @@ const Resetpass = () => {
     }
     const handleSubmit = async (e: any) => {
         e.preventDefault()
-        // setLoad(true)
+        setLoad(true)
         if (password !== repeatPassword) {
             toast('Passwords do not match', {
                 position: "bottom-center",
@@ -97,9 +97,8 @@ const Resetpass = () => {
                             'Content-Type': 'application/json',
                         }
                     }
-                )
-                console.log(res.data.message)   
-                Navigate('/login')
+                )  
+                Navigate('/login?passwordchanged=true')
             }
         }
     }

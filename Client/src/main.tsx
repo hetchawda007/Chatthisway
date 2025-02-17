@@ -1,9 +1,7 @@
 import { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import Login from './pages/Login.tsx';
 import './index.css';
-import Signup from './pages/Signup.tsx';
 import App from './App.tsx';
 import Home from './pages/Home.tsx';
 import Terms from './pages/Terms.tsx';
@@ -11,6 +9,8 @@ import Verifyotp from './pages/Verifyotp.tsx';
 import SignupContext from './Context/Signupcontext.ts';
 import LoginContext from './Context/Logincontext.ts';
 import Resetpass from './pages/Resetpass.tsx';
+import Loginwithrecaptcha from './Components/Loginwithrecaptcha.tsx';
+import Signupwithrecaptcha from './Components/Signupwithrecaptcha.tsx';
 
 const Main = () => {
   interface credentials {
@@ -30,8 +30,8 @@ const Main = () => {
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Home />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
+              <Route path="/login" element={<Loginwithrecaptcha />} />
+              <Route path="/signup" element={<Signupwithrecaptcha />} />
             <Route path="/verifyotp" element={<Verifyotp />} />
             <Route path="/terms&conditions" element={<Terms />} />
             <Route path="/dashboard/:username" element={<App />} />

@@ -8,9 +8,13 @@ import axios from "axios"
 import bcrypt from "bcryptjs"
 import { MdOutlineRemoveRedEye } from "react-icons/md";
 import { IoEyeOffOutline } from "react-icons/io5";
+import { useGoogleReCaptcha } from "react-google-recaptcha-v3"
+import { useLocation } from "react-router"
 
 const Login = () => {
-
+  const { executeRecaptcha } = useGoogleReCaptcha()
+  const location = useLocation().search
+  const islocaation = new URLSearchParams(location).get("passwordchanged")
   const [usermail, setUsermail] = useState<string>('')
   const [password, setPassword] = useState<string>('')
   const [visible, setVisible] = useState({ visible1: false, visible2: false })
@@ -28,11 +32,40 @@ const Login = () => {
     }
   }, [visible])
 
-  const handlechange = (e: any) => {
+  useEffect(() => {
+    if (islocaation === 'true') {
+      toast('Password Changed Successfully', {
+        position: "bottom-center",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: false,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "dark",
+      });
+    }
+  }, [])
+
+  const handlechange = () => {
     setVisible({ ...visible, visible1: !visible.visible1 });
   }
 
   const handleclick = async () => {
+
+    if (!executeRecaptcha) { return }
+    const token = await executeRecaptcha("submit");
+
+    const res = await axios.post('http://localhost:8080/api/verifyrecaptcha', { token: token }, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+
+    if (res.data.success === false) {
+      window.location.href = 'https://www.google.com';
+      return
+    }
 
     if (usermail.length === 0) {
       toast('Fill your username or email please', {
@@ -103,6 +136,19 @@ const Login = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoad(true)
+
+    if (!executeRecaptcha) { return }
+    const token = await executeRecaptcha("submit");
+
+    const response = await axios.post('http://localhost:8080/api/verifyrecaptcha', { token: token }, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+    if (response.data.success === false) {
+      window.location.href = 'https://www.google.com';
+    }
+
     const res = await axios.post('http://localhost:8080/api/auth', {
       usermail: usermail,
     }, {

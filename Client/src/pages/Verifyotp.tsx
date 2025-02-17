@@ -124,7 +124,7 @@ const Verifyotp = () => {
                 dbRequest.onupgradeneeded = function () {
                     const db = dbRequest.result;
                     db.createObjectStore("users", { keyPath: "id" });
-                };
+                };  
 
                 dbRequest.onsuccess = function () {
                     const db = dbRequest.result;
