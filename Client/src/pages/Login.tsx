@@ -1,15 +1,19 @@
-import { useState, useContext, useEffect, useRef } from "react"
+import { useState, useContext, useEffect, useRef, useMemo } from "react"
+import Commonheader from "../Components/Commonheader"
 import { Link } from "react-router"
 import { useNavigate } from "react-router"
 import { ToastContainer, toast } from "react-toastify"
 import LoginContext from "../Context/Logincontext"
 import SignupContext from "../Context/Signupcontext"
+import Code from "../Context/Logincode"
 import axios from "axios"
 import bcrypt from "bcryptjs"
+import naclUtil from "tweetnacl-util";
 import { MdOutlineRemoveRedEye } from "react-icons/md";
 import { IoEyeOffOutline } from "react-icons/io5";
 import { useGoogleReCaptcha } from "react-google-recaptcha-v3"
 import { useLocation } from "react-router"
+import { createcookie, checkcookie } from "../Api/useAuth"
 
 const Login = () => {
   const { executeRecaptcha } = useGoogleReCaptcha()
@@ -18,11 +22,14 @@ const Login = () => {
   const [usermail, setUsermail] = useState<string>('')
   const [password, setPassword] = useState<string>('')
   const [visible, setVisible] = useState({ visible1: false, visible2: false })
-  const [matchpass, setMatchpass] = useState<boolean>()
   const [load, setLoad] = useState(false)
   const Navigate = useNavigate()
   const logincontext = useContext(LoginContext)
   const signupcontext = useContext(SignupContext)
+  const code = useContext(Code)
+  const sendotp = useMemo(() => {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+  }, [])
 
   const ref = useRef<HTMLInputElement>(null)
 
@@ -33,6 +40,13 @@ const Login = () => {
   }, [visible])
 
   useEffect(() => {
+    const checkuser = async () => {
+      const res = await checkcookie();
+      if (res.message === 'Protected content') {
+        Navigate(`/dashboard/${res.username}`)
+      }
+    }
+    checkuser()
     if (islocaation === 'true') {
       toast('Password Changed Successfully', {
         position: "bottom-center",
@@ -44,6 +58,7 @@ const Login = () => {
         progress: undefined,
         theme: "dark",
       });
+      Navigate('/login')
     }
   }, [])
 
@@ -115,7 +130,8 @@ const Login = () => {
       })
       if (res.data.result === true) {
         signupcontext?.setCredentials({ email: '', username: '', password: '', repeatPassword: '', fname: '' })
-        Navigate('/verifyotp')
+        code?.setCode(sendotp)
+        Navigate(`/verifyotp/${sendotp}`)
       } else {
         toast('User not found', {
           position: "bottom-center",
@@ -181,10 +197,8 @@ const Login = () => {
       })
       if (res.data.password) {
         const isMatch = await bcrypt.compare(password, res.data.password);
-        setMatchpass(isMatch);
-        if (isMatch) {
-          Navigate(`/dashboard/${res.data.username}`);
-        } else {
+
+        if (!isMatch) {
           toast('Incorrect Password', {
             position: "bottom-center",
             autoClose: 3000,
@@ -197,39 +211,65 @@ const Login = () => {
           });
           setLoad(false);
           setPassword('');
+        } else {
+
+          const keys = await axios.post('http://localhost:8080/api/getcryptokeys', { usermail: usermail }, {
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          })
+
+          const decryptPrivateKey = async (encryptedKey: string, password: string, iv: string, salt: string) => {
+            const encoder = new TextEncoder();
+
+            const keyMaterial = await window.crypto.subtle.importKey(
+              "raw",
+              encoder.encode(password),
+              { name: "PBKDF2" },
+              false,
+              ["deriveKey"]
+            );
+
+            const derivedKey = await window.crypto.subtle.deriveKey(
+              { name: "PBKDF2", salt: naclUtil.decodeBase64(salt), iterations: 100000, hash: "SHA-256" },
+              keyMaterial,
+              { name: "AES-GCM", length: 256 },
+              false,
+              ["decrypt"]
+            );
+
+            const decrypted = await window.crypto.subtle.decrypt(
+              { name: "AES-GCM", iv: naclUtil.decodeBase64(iv) },
+              derivedKey,
+              naclUtil.decodeBase64(encryptedKey)
+            );
+
+            return new TextDecoder().decode(decrypted);
+          };
+          const cryptoprivatekey = await decryptPrivateKey(keys.data.cryptoprivatekey.encryptedKey, password, keys.data.cryptoprivatekey.iv, keys.data.cryptoprivatekey.salt);
+          const signinprivatekey = await decryptPrivateKey(keys.data.signatureprivatekey.encryptedKey, password, keys.data.signatureprivatekey.iv, keys.data.signatureprivatekey.salt);
+          try {
+            const dbRequest = indexedDB.open("Credentials", 1);
+
+            dbRequest.onupgradeneeded = function () {
+              const db = dbRequest.result;
+              db.createObjectStore("users", { keyPath: "id" });
+            };
+
+            dbRequest.onsuccess = function () {
+              const db = dbRequest.result;
+              const tx = db.transaction("users", "readwrite");
+              const store = tx.objectStore("users");
+              store.put({ id: 1, cryptokey: cryptoprivatekey, signinkey: signinprivatekey });
+            };
+          }
+          catch (error: any) {
+            console.error("Error storing data in IndexedDB:", error.message);
+          }
+          await createcookie(usermail);
+          Navigate(`/dashboard/${res.data.username}`);
         }
-      } else {
-        toast('Error retrieving password', {
-          position: "bottom-center",
-          autoClose: 3000,
-          hideProgressBar: false,
-          closeOnClick: false,
-          pauseOnHover: true,
-          draggable: true,
-          progress: undefined,
-          theme: "dark",
-        });
-        setLoad(false);
       }
-      const isMatch = await bcrypt.compare(password, res.data.password);
-      setMatchpass(isMatch)
-    }
-    else if (!matchpass) {
-      toast('Incorrect Password', {
-        position: "bottom-center",
-        autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: false,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "dark",
-      });
-      setLoad(false)
-      setPassword('')
-    }
-    else {
-      Navigate('/dashboard')
     }
   }
   return (
@@ -249,11 +289,8 @@ const Login = () => {
       <div className="absolute top-0 left-0 z-[-2] h-screen w-screen bg-neutral-950 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.3),rgba(255,255,255,0))]">
       </div>
       <div className='w-[50vw] mx-auto min-h-[50vh]'>
-        <div className='my-8 flex flex-col gap-5 items-center'>
-          <img className='h-20 w-20 object-cover rounded-full shadow-lg' src="logo.webp" alt="ChatThisWay Logo" />
-          <div className='text-gray-200 font-bold text-3xl tracking-wide'>ChatThisWay</div>
-        </div>
 
+        <Commonheader />
 
         <form onSubmit={handleSubmit} className="max-w-sm mx-auto">
 

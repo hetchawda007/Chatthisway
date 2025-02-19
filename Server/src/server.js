@@ -2,9 +2,7 @@ import express from 'express';
 import connectDB from './config/db.js';
 import cors from "cors"
 import cookieParser from 'cookie-parser';
-import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
-import bcrypt from 'bcryptjs';
 import Createuser from "./routes/Createuser.js";
 import Usermail from "./routes/Usermail.js";
 import auth from "./routes/auth.js";
@@ -13,6 +11,9 @@ import Getemail from "./routes/Getemail.js"
 import Updatepass from "./routes/Updatepass.js"
 import Verifyrecaptcha from "./routes/Verifyrecaptcha.js"
 import Createcookie from "./routes/Createcookie.js"
+import Getcryptokeys from "./routes/Getcryptokeys.js"
+import Checkcookie from "./routes/Checkcookie.js"
+import Deletecookie from "./routes/Deletecookie.js"
 
 const app = express();
 
@@ -21,9 +22,10 @@ await connectDB();
 dotenv.config()
 app.use(cookieParser())
 app.use(cors({
-  origin: process.env.CORS_ORIGIN_WHITELIST,
+  origin: 'http://localhost:5173',
   credentials: true
 }));
+app.use(express.json());
 
 app.use('/api', Createuser);
 app.use('/api', auth);
@@ -33,6 +35,9 @@ app.use('/api', Getemail);
 app.use('/api', Updatepass);
 app.use('/api', Verifyrecaptcha);
 app.use('/api', Createcookie);
+app.use('/api', Getcryptokeys);
+app.use('/api', Checkcookie);
+app.use('/api', Deletecookie);
 
 app.get('/', (req, res) => {
   res.send('Hello World!')

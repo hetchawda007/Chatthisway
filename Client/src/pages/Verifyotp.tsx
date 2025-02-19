@@ -1,18 +1,23 @@
 import { useEffect, useState, useContext, useMemo } from "react";
 import SignupContext from '../Context/Signupcontext';
 import axios from 'axios';
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import nacl from "tweetnacl";
 import naclUtil from "tweetnacl-util";
 import bcrypt from "bcryptjs";
 import LoginContext from "../Context/Logincontext";
+import Code from "../Context/Logincode";
+import Commonheader from "../Components/Commonheader";
+import { createcookie } from "../Api/useAuth"
 
 const Verifyotp = () => {
+    const { codenumber } = useParams();
     const [otp, setOtp] = useState(Array(6).fill(""));
     const [load, setLoad] = useState(false);
     const creadentials = useContext(SignupContext);
     const logincontext = useContext(LoginContext);
+    const code = useContext(Code);
     const Navigate = useNavigate();
     const sendotp = useMemo(() => {
         return Math.floor(100000 + Math.random() * 900000).toString();
@@ -34,7 +39,9 @@ const Verifyotp = () => {
     };
 
     useEffect(() => {
-
+        if (codenumber !== code?.code) {
+            Navigate('/pagenotfound')
+        }
         const otpsender = async () => {
             try {
                 const response = await axios.post(
@@ -92,7 +99,8 @@ const Verifyotp = () => {
             setLoad(false);
         }
         if (creadentials?.credentials.username === "" && otp.join("") === sendotp.toString()) {
-            Navigate(`/resetpass/${logincontext?.usermail}`);
+            code?.setCode(sendotp.toString());
+            Navigate(`/resetpass/${logincontext?.usermail}${sendotp}`);
         } else {
             if (otp.join("") === sendotp.toString() && creadentials?.credentials.username !== "") {
                 const generateSigningKeyPair = async () => {
@@ -115,33 +123,81 @@ const Verifyotp = () => {
                     return hashedPassword;
                 }
 
-                const hashedPassword = await hashPassword(creadentials?.credentials.password ? creadentials?.credentials.password : "")
+                const encryptPrivateKey = async (privateKey: string, password: string) => {
+                    const encoder = new TextEncoder();
+
+                    // Generate a salt for PBKDF2
+                    const salt = window.crypto.getRandomValues(new Uint8Array(16));
+
+                    // Derive encryption key using PBKDF2
+                    const keyMaterial = await window.crypto.subtle.importKey(
+                        "raw",
+                        encoder.encode(password),
+                        { name: "PBKDF2" },
+                        false,
+                        ["deriveKey"]
+                    );
+
+                    const derivedKey = await window.crypto.subtle.deriveKey(
+                        { name: "PBKDF2", salt, iterations: 100000, hash: "SHA-256" },
+                        keyMaterial,
+                        { name: "AES-GCM", length: 256 },
+                        false,
+                        ["encrypt"]
+                    );
+
+                    const iv = window.crypto.getRandomValues(new Uint8Array(12)); // Random IV
+
+                    // Encrypt the private key using AES-GCM
+                    const encrypted = await window.crypto.subtle.encrypt(
+                        { name: "AES-GCM", iv },
+                        derivedKey,
+                        encoder.encode(privateKey)
+                    );
+
+                    return {
+                        encryptedKey: naclUtil.encodeBase64(new Uint8Array(encrypted)),
+                        iv: naclUtil.encodeBase64(iv),
+                        salt: naclUtil.encodeBase64(salt),
+                    };
+                };
+
                 const signingKeyPair = await generateSigningKeyPair();
                 const cryptoKeyPair = await generatecryptoKeyPair();
+                const hashedPassword = await hashPassword(creadentials?.credentials.password ? creadentials?.credentials.password : "")
+                const privatecryptokey = await encryptPrivateKey(cryptoKeyPair.privateKey, creadentials?.credentials.password ? creadentials?.credentials.password : "");
+                const privatesigninkey = await encryptPrivateKey(signingKeyPair.privateKey, creadentials?.credentials.password ? creadentials?.credentials.password : "");
+                console.log(cryptoKeyPair.privateKey, creadentials?.credentials.password, privatecryptokey);
+                console.log(signingKeyPair.privateKey, creadentials?.credentials.password, privatesigninkey);
+                try {
+                    const dbRequest = indexedDB.open("Credentials", 1);
 
-                const dbRequest = indexedDB.open("Credentials", 1);
+                    dbRequest.onupgradeneeded = function () {
+                        const db = dbRequest.result;
+                        db.createObjectStore("users", { keyPath: "id" });
+                    };
 
-                dbRequest.onupgradeneeded = function () {
-                    const db = dbRequest.result;
-                    db.createObjectStore("users", { keyPath: "id" });
-                };  
-
-                dbRequest.onsuccess = function () {
-                    const db = dbRequest.result;
-                    const tx = db.transaction("users", "readwrite");
-                    const store = tx.objectStore("users");
-                    store.put({ id: 1, cryptokey: cryptoKeyPair?.privateKey, signinkey: signingKeyPair?.privateKey });
-                };
+                    dbRequest.onsuccess = function () {
+                        const db = dbRequest.result;
+                        const tx = db.transaction("users", "readwrite");
+                        const store = tx.objectStore("users");
+                        store.put({ id: 1, cryptokey: cryptoKeyPair?.privateKey, signinkey: signingKeyPair?.privateKey });
+                    };
+                }
+                catch (error: any) {
+                    console.error("Error storing data in IndexedDB:", error.message);
+                }
 
                 try {
                     await axios.post('http://localhost:8080/api/createuser', {
                         username: creadentials?.credentials?.username || "",
                         email: creadentials?.credentials?.email || "",
-                        cryptokey: cryptoKeyPair?.publicKey || "",
-                        signinkey: signingKeyPair?.publicKey || "",
+                        publiccryptokey: cryptoKeyPair?.publicKey || "",
+                        publicsigninkey: signingKeyPair?.publicKey || "",
+                        privatecryptokey: privatecryptokey || "",
+                        privatesigninkey: privatesigninkey || "",
                         password: hashedPassword || "",
                         fname: creadentials?.credentials?.fname || "",
-
                     }, {
                         headers: {
                             'Content-Type': 'application/json',
@@ -150,7 +206,9 @@ const Verifyotp = () => {
                 } catch (error: any) {
                     console.error("Error creating user:", error.response?.data || error.message);
                 }
-
+                if (creadentials?.credentials.username) {
+                    await createcookie(creadentials.credentials.username);
+                }
                 Navigate(`/dashboard/${creadentials?.credentials.username}`);
             }
         }
@@ -173,10 +231,7 @@ const Verifyotp = () => {
             <div className="absolute top-0 left-0 z-[-2] h-screen w-screen bg-neutral-950 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.3),rgba(255,255,255,0))]">
             </div>
             <div className='w-[50vw] mx-auto min-h-[50vh]'>
-                <div className='my-8 flex flex-col gap-5 items-center'>
-                    <img className='h-20 w-20 object-cover rounded-full shadow-lg' src="logo.webp" alt="ChatThisWay Logo" />
-                    <div className='text-gray-200 font-bold text-3xl tracking-wide'>ChatThisWay</div>
-                </div>
+                <Commonheader />
 
                 <form onSubmit={handleSubmit} className="max-w-sm mx-auto flex flex-col items-center">
                     <div className="flex mb-2 space-x-2 rtl:space-x-reverse">

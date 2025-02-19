@@ -1,7 +1,28 @@
 import './App.css'
+import { useEffect, useState } from 'react'
 import { useParams } from 'react-router'
+import { useNavigate } from 'react-router'
+import { checkcookie, deletecookie } from './Api/useAuth'
+
 function App() {
   const { username } = useParams()
+  const Navigate = useNavigate()
+
+  useEffect(() => {
+    const check = async () => {
+      const res = await checkcookie()
+      if (res.message !== 'Protected content') {
+        Navigate('/login')
+      }
+    }
+    check()
+  }, [])
+
+  const handlelogout = async () => {
+    const res = await deletecookie()
+    Navigate('/login')
+  }
+
   return (
     <>
       {/* <div className='text-red-600'>dashboard of {username}</div> */}
@@ -21,12 +42,12 @@ function App() {
               <div className="relative">
                 <div className="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
                   <svg className="w-4 h-4 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
-                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z" />
+                    <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z" />
                   </svg>
                 </div>
                 <input type="search" id="default-search" className="block w-full p-2 ps-10 text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder="Search" required />
               </div>
-              <button type="button" className="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-full text-sm px-5 py-2.5 me-2 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700">Light</button>
+              <button type="button" className="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-full text-sm px-5 py-2.5 me-2 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700">Search</button>
             </form>
           </div>
 
@@ -59,7 +80,7 @@ function App() {
             </div> */}
 
               // message ui
-
+          <button className='bg-red-600 text-white px-3 py-2 rounded-lg' onClick={handlelogout} >Logout</button>
           {/* <div className="flex items-start gap-2.5">
             <img className="w-8 h-8 rounded-full" src="/logo.webp" alt="Jese image" />
               <div className="flex flex-col gap-1 w-full max-w-[320px]">

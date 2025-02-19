@@ -1,3 +1,4 @@
+import jwt from 'jsonwebtoken';
 import express from 'express';
 import User from '../models/User.js';
 
@@ -5,19 +6,17 @@ const router = express.Router();
 
 router.post('/createcookie', async (req, res) => {
     try {
-        const user = await User.findOne({ email: req.body.email });
+        const user = await User.findOne({ $or: [{ username: req.body.usermail }, { email: req.body.usermail }] })
 
         const token = jwt.sign(
-            { email: "hetchawda44@gmail.com" },
-            process.env.JWT_SECRET || "fallbackSecret", // Provide a default
-            { expiresIn: "1h" }
+            { email: user.email }, process.env.JWT_SECRET || "fallbackSecret", { expiresIn: "1h" }
         );
-        app.use(express.json(), token);
+
         res.cookie("token", token, {
             httpOnly: true, // Prevents JavaScript access
             secure: process.env.NODE_ENV === "production", // Only HTTPS in production
             sameSite: "strict", // Prevents CSRF attacks
-            maxAge: 60 * 60 * 1000 // 1 hour
+            maxAge: 60 * 60 * 168000 // 7 days
         });
 
         res.json({ message: "Login successful" });

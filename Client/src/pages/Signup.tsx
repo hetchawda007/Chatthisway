@@ -1,25 +1,41 @@
-import React, { useState, useContext, useRef, useEffect } from 'react';
+import React, { useState, useContext, useRef, useEffect, useMemo } from 'react';
 import { Link } from 'react-router';
 import { useNavigate } from 'react-router-dom';
 import { toast, ToastContainer } from 'react-toastify';
 import SignupContext from '../Context/Signupcontext';
 import LoginContext from '../Context/Logincontext';
+import Code from '../Context/Logincode';
 import axios from 'axios';
 import { MdOutlineRemoveRedEye } from "react-icons/md";
 import { IoEyeOffOutline } from "react-icons/io5";
 import { useGoogleReCaptcha } from "react-google-recaptcha-v3"
+import Commonheader from '../Components/Commonheader';
+import { checkcookie } from "../Api/useAuth"
 
 const Signup = () => {
   const { executeRecaptcha } = useGoogleReCaptcha()
-  const creadentials = useContext(SignupContext);
   const [load, setLoad] = useState(false)
+  const creadentials = useContext(SignupContext);
   const Logincredentials = useContext(LoginContext)
+  const code = useContext(Code)
   const [visible, setVisible] = useState({ visible1: false, visible2: false })
   const [formData, setFormData] = useState({ email: '', username: '', password: '', repeatPassword: '', fname: '' })
   const Navigate = useNavigate()
   const ref1 = useRef<HTMLInputElement>(null)
   const ref2 = useRef<HTMLInputElement>(null)
+  const sendotp = useMemo(() => {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+  }, [])
 
+  useEffect(() => {
+    const checkuser = async () => {
+      const res = await checkcookie();
+      if (res.message === 'Protected content') {
+        Navigate(`/dashboard/${res.username}`)
+      }
+    }
+    checkuser()
+  }, [])
 
   useEffect(() => {
     if (ref1.current) {
@@ -36,7 +52,7 @@ const Signup = () => {
 
   const handlechange = (e: any) => {
     const { name, value } = e.target;
-    if (name === 'username' || name === 'password') {
+    if (name === 'username' || name === 'password' || name === 'repeatPassword') {
       setFormData({ ...formData, [name]: value.replace(/\s/g, '') });
     } else {
       setFormData({ ...formData, [name]: value });
@@ -51,7 +67,6 @@ const Signup = () => {
 
     if (!executeRecaptcha) { return }
     const token = await executeRecaptcha("submit");
-
     const res = await axios.post('http://localhost:8080/api/verifyrecaptcha', { token: token }, {
       headers: {
         'Content-Type': 'application/json'
@@ -63,7 +78,7 @@ const Signup = () => {
     }
 
     if (formData.password !== formData.repeatPassword) {
-      toast('Passwords do not match', {
+      toast(`Passwords do not match ${formData.password} ${formData.repeatPassword}`, {
         position: "bottom-center",
         autoClose: 3000,
         hideProgressBar: false,
@@ -142,7 +157,8 @@ const Signup = () => {
       else {
         creadentials?.setCredentials(formData);
         Logincredentials?.setUsermail(formData.email);
-        Navigate('/verifyotp')
+        code?.setCode(sendotp);
+        Navigate(`/verifyotp/${sendotp}`);
       }
     }
   }
@@ -164,11 +180,7 @@ const Signup = () => {
       <div className="absolute top-0 left-0 z-[-2] overflow-x-hidden h-[120vh] w-screen bg-neutral-950 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.3),rgba(255,255,255,0))]">
       </div>
       <div className='w-[50vw] mx-auto min-h-[50vh] overflow-x-hidden'>
-        <div className='my-8 flex flex-col gap-5 items-center'>
-          <img className='h-20 w-20 object-cover rounded-full shadow-lg' src="logo.webp" alt="ChatThisWay Logo" />
-          <div className='text-gray-200 font-bold text-3xl tracking-wide'>ChatThisWay</div>
-        </div>
-
+        <Commonheader />
 
         <form onSubmit={handleSubmit} className="max-w-sm mx-auto">
           <div className="mb-5">

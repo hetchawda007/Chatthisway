@@ -14,12 +14,20 @@ const userSchema = new Schema({
         type: String,
         required: true
     },
+    cryptoprivatekey: {
+        type: Object,
+        required: true
+    },
     fname: {
         type: String,
         required: true
     },
     password: {
         type: String,
+        required: true
+    },
+    signatureprivatekey: {
+        type: Object,
         required: true
     },
     signaturepublickey: {

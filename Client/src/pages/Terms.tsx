@@ -1,4 +1,5 @@
 const Terms = () => {
+
   return (
     <div>
       our terms

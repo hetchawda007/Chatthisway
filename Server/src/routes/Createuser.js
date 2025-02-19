@@ -8,10 +8,12 @@ router.post('/createuser', async (req, res) => {
         const user = await new User({
             username: req.body.username,
             email: req.body.email,
-            cryptopublickey: req.body.cryptokey,
-            signaturepublickey: req.body.signinkey,
+            cryptopublickey: req.body.publiccryptokey,
+            signaturepublickey: req.body.publicsigninkey,
             password: req.body.password,
             fname: req.body.fname,
+            cryptoprivatekey: req.body.privatecryptokey,
+            signatureprivatekey: req.body.privatesigninkey,
         });
         await user.save();
         res.send('User created');

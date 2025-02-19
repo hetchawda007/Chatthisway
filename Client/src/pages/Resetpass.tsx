@@ -1,18 +1,24 @@
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useContext } from "react"
 import { ToastContainer, toast } from "react-toastify"
 import { MdOutlineRemoveRedEye } from "react-icons/md";
 import { IoEyeOffOutline } from "react-icons/io5";
-import { useParams } from "react-router";
-import { useNavigate } from "react-router";
+import { useParams, useNavigate } from "react-router";
 import axios from "axios";
 import bcrypt from "bcryptjs"
+import naclUtil from "tweetnacl-util";
+import Code from "../Context/Logincode";
+import Commonheader from "../Components/Commonheader";
 
 const Resetpass = () => {
     const { usermail } = useParams()
+    const code = useContext(Code)
     const Navigate = useNavigate()
+    const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [repeatPassword, setRepeatPassword] = useState('')
     const [visible, setVisible] = useState({ visible1: false, visible2: false })
+    const [cryptokey, setCryptokey] = useState('')
+    const [signkey, setSignkey] = useState('')
     const [load, setLoad] = useState(false)
     const ref1 = useRef<HTMLInputElement>(null)
     const ref2 = useRef<HTMLInputElement>(null)
@@ -25,6 +31,15 @@ const Resetpass = () => {
             ref2.current.type = visible.visible2 ? "text" : "password";
         }
     }, [visible])
+
+    useEffect(() => {
+        const mail = usermail?.slice(0, usermail.length - 6)
+        const code2 = usermail?.slice(usermail?.length - 6, usermail?.length)
+        if (code2 !== code?.code) {
+            Navigate('/pagenotfound')
+        }
+        setEmail(mail || '')
+    }, [])
 
     const handlechange1 = () => {
         setVisible({ ...visible, visible1: !visible.visible1 });
@@ -62,7 +77,7 @@ const Resetpass = () => {
             return;
         }
         else {
-            const res = await axios.post('http://localhost:8080/api/getpass', { usermail: usermail },
+            const res = await axios.post('http://localhost:8080/api/getpass', { usermail: email },
                 {
                     headers: {
                         'Content-Type': 'application/json',
@@ -82,22 +97,87 @@ const Resetpass = () => {
                     progress: undefined,
                     theme: "dark",
                 });
+                setLoad(false)
                 return;
             }
             else {
+
+                try {
+                    const dbRequest = indexedDB.open("Credentials", 1);
+                    dbRequest.onsuccess = function () {
+                        const db = dbRequest.result;
+                        const tx = db.transaction("users", "readonly");
+                        const store = tx.objectStore("users");
+
+                        const getRequest = store.get(1);
+                        getRequest.onsuccess = function () {
+                            setCryptokey(getRequest.result.cryptokey)
+                            setSignkey(getRequest.result.signinkey)
+                        };
+                    };
+
+                    dbRequest.onerror = function () {
+                        console.error("Error opening database:", dbRequest.error);
+                    };
+                } catch (error) {
+                    console.error("Error accessing IndexedDB:", error);
+                }
+
+                const encryptPrivateKey = async (privateKey: string, password: string) => {
+                    const encoder = new TextEncoder();
+
+                    // Generate a salt for PBKDF2
+                    const salt = window.crypto.getRandomValues(new Uint8Array(16));
+
+                    // Derive encryption key using PBKDF2
+                    const keyMaterial = await window.crypto.subtle.importKey(
+                        "raw",
+                        encoder.encode(password),
+                        { name: "PBKDF2" },
+                        false,
+                        ["deriveKey"]
+                    );
+
+                    const derivedKey = await window.crypto.subtle.deriveKey(
+                        { name: "PBKDF2", salt, iterations: 100000, hash: "SHA-256" },
+                        keyMaterial,
+                        { name: "AES-GCM", length: 256 },
+                        false,
+                        ["encrypt"]
+                    );
+
+                    const iv = window.crypto.getRandomValues(new Uint8Array(12)); // Random IV
+
+                    // Encrypt the private key using AES-GCM
+                    const encrypted = await window.crypto.subtle.encrypt(
+                        { name: "AES-GCM", iv },
+                        derivedKey,
+                        encoder.encode(privateKey)
+                    );
+
+                    return {
+                        encryptedKey: naclUtil.encodeBase64(new Uint8Array(encrypted)),
+                        iv: naclUtil.encodeBase64(iv),
+                        salt: naclUtil.encodeBase64(salt),
+                    };
+                };
+
                 async function hashPassword(password: string) {
                     const salt = await bcrypt.genSalt(10);
                     const hashedPassword = await bcrypt.hash(password, salt);
                     return hashedPassword;
                 }
+
+                const encryptedCryptoKey = await encryptPrivateKey(cryptokey, password)
+                const encryptedSignKey = await encryptPrivateKey(signkey, password)
                 const hashedPassword = await hashPassword(password)
-                const res = await axios.put('http://localhost:8080/api/updatepass', { usermail: usermail, password: hashedPassword },
+                const res = await axios.put('http://localhost:8080/api/updatepass', { usermail: email, password: hashedPassword, cryptokey: encryptedCryptoKey, signinkey: encryptedSignKey },
                     {
                         headers: {
                             'Content-Type': 'application/json',
                         }
                     }
-                )  
+                )
                 Navigate('/login?passwordchanged=true')
             }
         }
@@ -119,10 +199,8 @@ const Resetpass = () => {
             <div className="absolute top-0 left-0 z-[-2] h-screen w-screen bg-neutral-950 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.3),rgba(255,255,255,0))]">
             </div>
             <div className='w-[50vw] mx-auto min-h-[50vh]'>
-                <div className='my-8 flex flex-col gap-5 items-center'>
-                    <img className='h-20 w-20 object-cover rounded-full shadow-lg' src="logo.webp" alt="ChatThisWay Logo" />
-                    <div className='text-gray-200 font-bold text-3xl tracking-wide'>ChatThisWay</div>
-                </div>
+
+                <Commonheader />
 
                 <form onSubmit={handleSubmit} className="max-w-sm mx-auto">
                     <div className="mb-5">
