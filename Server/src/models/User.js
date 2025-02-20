@@ -41,6 +41,10 @@ const userSchema = new Schema({
     description: {
         type: String,
         default: ''
+    },
+    passwordversion: {
+        type: Number,
+        default: 1
     }
 }, { timestamps: true });
 

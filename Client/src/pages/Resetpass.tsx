@@ -8,6 +8,7 @@ import bcrypt from "bcryptjs"
 import naclUtil from "tweetnacl-util";
 import Code from "../Context/Logincode";
 import Commonheader from "../Components/Commonheader";
+import { deletecookie } from "../Api/useAuth";
 
 const Resetpass = () => {
     const { usermail } = useParams()
@@ -178,6 +179,26 @@ const Resetpass = () => {
                         }
                     }
                 )
+
+                try {
+                    const dbRequest = indexedDB.open("Credentials", 1);
+
+                    dbRequest.onupgradeneeded = function () {
+                        const db = dbRequest.result;
+                        db.createObjectStore("users", { keyPath: "id" });
+                    };
+
+                    dbRequest.onsuccess = function () {
+                        const db = dbRequest.result;
+                        const tx = db.transaction("users", "readwrite");
+                        const store = tx.objectStore("users");
+                        store.put({ id: 1, cryptokey: '', signinkey: '' });
+                    };
+                }
+                catch (error: any) {
+                    console.error("Error storing data in IndexedDB:", error.message);
+                }
+                await deletecookie()
                 Navigate('/login?passwordchanged=true')
             }
         }

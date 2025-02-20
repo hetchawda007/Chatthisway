@@ -39,10 +39,6 @@ app.use('/api', Getcryptokeys);
 app.use('/api', Checkcookie);
 app.use('/api', Deletecookie);
 
-app.get('/', (req, res) => {
-  res.send('Hello World!')
-})
-
 app.listen(8080, () => {
   console.log('Server is running on port http://localhost:8080');
 })

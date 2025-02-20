@@ -70,7 +70,7 @@ const Verifyotp = () => {
             }
         };
         otpsender();
-    }, []);
+    }, [sendotp]);
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
         if (e.key === "Backspace" && otp[index] === "") {
@@ -167,8 +167,6 @@ const Verifyotp = () => {
                 const hashedPassword = await hashPassword(creadentials?.credentials.password ? creadentials?.credentials.password : "")
                 const privatecryptokey = await encryptPrivateKey(cryptoKeyPair.privateKey, creadentials?.credentials.password ? creadentials?.credentials.password : "");
                 const privatesigninkey = await encryptPrivateKey(signingKeyPair.privateKey, creadentials?.credentials.password ? creadentials?.credentials.password : "");
-                console.log(cryptoKeyPair.privateKey, creadentials?.credentials.password, privatecryptokey);
-                console.log(signingKeyPair.privateKey, creadentials?.credentials.password, privatesigninkey);
                 try {
                     const dbRequest = indexedDB.open("Credentials", 1);
 
@@ -252,7 +250,7 @@ const Verifyotp = () => {
                             </div>
                         ))}
                     </div>
-                    <p id="helper-text-explanation" className="mt-2 mb-5 text-sm text-gray-500 dark:text-gray-400">Please enter the 6 digit code we sent via email.</p>
+                    <p id="helper-text-explanation" className="mt-2 mb-5 text-sm text-gray-500 dark:text-gray-400">We have sent code to {logincontext?.usermail.replace(/(.{1}).+(.{1}@.+)/, "$1*******$2")}</p>
                     {!load && <button type="submit" className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">Confirm</button>}
 
                     {load && <button disabled type="button" className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800 inline-flex items-center">

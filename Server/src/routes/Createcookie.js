@@ -9,7 +9,7 @@ router.post('/createcookie', async (req, res) => {
         const user = await User.findOne({ $or: [{ username: req.body.usermail }, { email: req.body.usermail }] })
 
         const token = jwt.sign(
-            { email: user.email }, process.env.JWT_SECRET || "fallbackSecret", { expiresIn: "1h" }
+            { email: user.email, passwordversion: user.passwordversion }, process.env.JWT_SECRET || "fallbackSecret", { expiresIn: "7d" }
         );
 
         res.cookie("token", token, {
