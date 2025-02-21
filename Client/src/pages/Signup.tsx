@@ -52,7 +52,11 @@ const Signup = () => {
 
   const handlechange = (e: any) => {
     const { name, value } = e.target;
-    if (name === 'username' || name === 'password' || name === 'repeatPassword') {
+    if (name === 'username') {
+      setFormData({ ...formData, [name]: value.replace(/[^a-zA-Z0-9_]/g, '') });
+    } else if (name === 'fname') {
+      setFormData({ ...formData, [name]: value.replace(/[^a-zA-Z\s]/g, '') });
+    } else if (name === 'password' || name === 'repeatPassword') {
       setFormData({ ...formData, [name]: value.replace(/\s/g, '') });
     } else {
       setFormData({ ...formData, [name]: value });
@@ -179,7 +183,7 @@ const Signup = () => {
       />
       <div className="absolute top-0 left-0 z-[-2] overflow-x-hidden h-[120vh] w-screen bg-neutral-950 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.3),rgba(255,255,255,0))]">
       </div>
-      <div className='w-[50vw] mx-auto min-h-[50vh] overflow-x-hidden'>
+      <div className='w-[50vw] overflow-y-auto mx-auto min-h-[50vh] overflow-x-hidden'>
         <Commonheader />
 
         <form onSubmit={handleSubmit} className="max-w-sm mx-auto">

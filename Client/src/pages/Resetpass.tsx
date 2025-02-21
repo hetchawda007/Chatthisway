@@ -227,7 +227,7 @@ const Resetpass = () => {
                     <div className="mb-5">
                         <label htmlFor="password" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Your new password</label>
                         <div className="flex items-center justify-evenly">
-                            <input ref={ref1} onChange={(e) => setPassword(e.target.value)} name='password' value={password} type="password" id="password" className="shadow-xs bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500 dark:shadow-xs-light" placeholder="Tqs#F56@sfrw*$ds" required />
+                            <input ref={ref1} autoFocus onChange={(e) => setPassword(e.target.value)} name='password' value={password} type="password" id="password" className="shadow-xs bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500 dark:shadow-xs-light" placeholder="Tqs#F56@sfrw*$ds" required />
                             {visible.visible1 && <MdOutlineRemoveRedEye onClick={handlechange1} className="cursor-pointer size-6 relative right-8 text-gray-500 dark:text-gray-400" />}
                             {!visible.visible1 && <IoEyeOffOutline onClick={handlechange1} className="cursor-pointer size-6 relative right-8 text-gray-500 dark:text-gray-400" />}
                         </div>
