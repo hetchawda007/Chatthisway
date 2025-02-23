@@ -15,6 +15,8 @@ import Getcryptokeys from "./routes/Getcryptokeys.js"
 import Checkcookie from "./routes/Checkcookie.js"
 import Deletecookie from "./routes/Deletecookie.js"
 import Getusers from "./routes/Getusers.js"
+import Userdata from "./routes/Userdata.js"
+import Updateprofile from "./routes/Updateprofile.js"
 
 const app = express();
 
@@ -40,6 +42,8 @@ app.use('/api', Getcryptokeys);
 app.use('/api', Checkcookie);
 app.use('/api', Deletecookie);
 app.use('/api', Getusers);
+app.use('/api', Userdata);
+app.use('/api', Updateprofile);
 
 app.listen(8080, () => {
   console.log('Server is running on port http://localhost:8080');

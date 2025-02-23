@@ -1,11 +1,13 @@
 import './App.css'
 import { useEffect, useState, useContext } from 'react'
-import { useParams } from 'react-router'
-import { useNavigate } from 'react-router'
+import { useParams, useNavigate } from 'react-router'
 import { checkcookie, deletecookie } from './Api/useAuth'
 import { motion } from 'framer-motion'
-import Usercontext from './Context/Usercontext'
+import Userscontext from './Context/Userscontext'
+import Userdata from './Context/Userdata'
 import axios from 'axios'
+import { ToastContainer, toast } from 'react-toastify'
+import Chat from './Components/Chat'
 
 function App() {
 
@@ -18,7 +20,11 @@ function App() {
     username: string;
   }
 
-  const Users = useContext(Usercontext)
+  const Users = useContext(Userscontext)
+  const [cryptokey, setCryptokey] = useState('')
+  const [signkey, setSignkey] = useState('')
+  const [profiledata, setProfiledata] = useState({ fname: '', description: '', gender: '' })
+  const userdata = useContext(Userdata)
   const { username } = useParams()
   const Navigate = useNavigate()
   const samplenames = [
@@ -69,11 +75,47 @@ function App() {
         const resp = response.data.filter((user: user) => user.username !== res.username)
         Users?.setUsers(resp)
         setUsers(response.data)
+
+        try {
+          const dbRequest = indexedDB.open("Credentials", 1);
+          dbRequest.onsuccess = function () {
+            const db = dbRequest.result;
+            const tx = db.transaction("users", "readonly");
+            const store = tx.objectStore("users");
+
+            const getRequest = store.get(1);
+            getRequest.onsuccess = function () {
+              setCryptokey(getRequest.result.cryptokey)
+              setSignkey(getRequest.result.signinkey)
+            };
+          };
+
+          dbRequest.onerror = function () {
+            console.error("Error opening database:", dbRequest.error);
+          };
+        } catch (error) {
+          console.error("Error accessing IndexedDB:", error);
+        }
+
+        let user = await axios.post(`http://localhost:8080/api/userdata`, { username: res.username }, { headers: { 'Content-Type': 'application/json' } })
+        setProfiledata({ fname: user.data.fname, description: user.data.description, gender: user.data.gender })
+        user.data.signatureprivatekey = signkey;
+        user.data.cryptoprivatekey = cryptokey;
+        userdata?.setUser(user.data)
         Navigate(`/dashboard/${res.username}`)
       }
     }
     check()
   }, [])
+
+  const handlechange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>): void => {
+    const { name, value } = e.target;
+    if (name === 'fname' && value.length > 20) {
+      setProfiledata({ ...profiledata, [name]: value.slice(0, 20) });
+    } else {
+      setProfiledata({ ...profiledata, [name]: value });
+    }
+  }
 
   const handlesearch = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -98,9 +140,25 @@ function App() {
     }
   }
 
+  const profilesubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (profiledata.fname.length < 7 || profiledata.fname.length > 20) {
+      toast.error('Full name should be between 7 and 20 characters long')
+      return
+    }
+    if (profiledata.description.length < 10 || profiledata.description.length > 100) {
+      toast.error('Description should be between 10 and 100 characters long')
+      return
+    }
+    const res = await axios.post(`http://localhost:8080/api/updateprofile`, { email: userdata?.user.email, fname: profiledata.fname, description: profiledata.description, gender: profiledata.gender }, { headers: { 'Content-Type': 'application/json' } })
+    setProfilevisibility(false)
+    userdata?.setUser({ ...userdata.user, fname: profiledata.fname, description: profiledata.description, gender: profiledata.gender })
+    toast.success(res.data.message)
+  }
+
   const handlechat = (user: ChatUser) => {
     setSearch(false)
-    Navigate(`/dashboard/${username}#${user.username}`)
+    Navigate(`/dashboard/${username}/${user.username}`)
   }
 
   const handlelogout = async () => {
@@ -128,6 +186,18 @@ function App() {
 
   return (
     <>
+      <ToastContainer
+        position="bottom-center"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick={false}
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="dark"
+      />
       <div className="container mx-auto flex h-screen">
 
         <div className='w-[27%] overflow-y-auto min-h-full bg-gradient-to-t from-[#1a1a1a] via-[#272727] to-[#313131]'>
@@ -141,22 +211,22 @@ function App() {
                 transition={{ duration: 0.3 }}
               >
                 <div className="px-4 cursor-default py-3 text-sm text-gray-900 dark:text-white">
-                  <div>Bonnie Green</div>
-                  <div className="font-medium truncate">name@flowbite.com</div>
+                  <div>{userdata?.user.username}</div>
+                  <div className="font-medium truncate">{userdata?.user.email}</div>
                 </div>
                 <ul className="py-2 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="avatarButton">
-                  <li>
-                    <a href="#profile" onClick={() => { setProfilevisibility(true); setDropdown(false) }} className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-[#000000] dark:hover:text-white">Profile</a>
+                  <li className='cursor-pointer' onClick={() => { setProfilevisibility(false); setDropdown(false); setSearch(false) }} >
+                    <a className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-[#000000] dark:hover:text-white">Dashboard</a>
                   </li>
-                  <li>
-                    <a href="#" className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-[#000000] dark:hover:text-white">Settings</a>
+                  <li className='cursor-pointer' onClick={searchclick}>
+                    <a className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-[#000000] dark:hover:text-white">Search</a>
                   </li>
-                  <li>
-                    <a href="#" className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-[#000000] dark:hover:text-white">Earnings</a>
+                  <li className='cursor-pointer' onClick={() => { setProfilevisibility(true); setDropdown(false); setSearch(false) }} >
+                    <a href='#profile' className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-[#000000] dark:hover:text-white">Profile</a>
                   </li>
                 </ul>
-                <div onClick={handlelogout} className="py-1 dark:hover:bg-[#000000] rounded-b-xl">
-                  <a href="#" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 dark:hover:text-white">Log Out</a>
+                <div onClick={handlelogout} className="py-1 cursor-pointer dark:hover:bg-[#000000] rounded-b-xl">
+                  <a className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 dark:hover:text-white">Log Out</a>
                 </div>
               </motion.div>}
             </div>
@@ -169,7 +239,9 @@ function App() {
                     <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z" />
                   </svg>
                 </div>
-                <input onChange={(e) => setSearchtext(e.target.value)} onClick={searchclick} value={searchtext} name='search' type="search" id="default-search" className="block w-full py-2 ps-10 text-gray-900 border border-gray-300 rounded-full bg-gray-50 focus:ring-blue-500 focus:border-blue-500 hover:border-blue-100 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder="Search" required />
+                <input onClick={searchclick} onChange={(e) => {
+                  setSearchtext(e.target.value); setProfilevisibility(false)
+                }} value={searchtext} name='search' type="search" id="default-search" className="block w-full py-2 ps-10 text-gray-900 border border-gray-300 rounded-full bg-gray-50 focus:ring-blue-500 focus:border-blue-500 hover:border-blue-100 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder="Search" required />
               </div>
               <button type="submit" className="text-white bg-blue-600 border border-blue-600 focus:outline-none hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 font-medium rounded-full text-sm px-4 py-2 me-2 dark:bg-blue-500 dark:border-blue-500 dark:hover:bg-blue-600 dark:focus:ring-blue-800" disabled={searchtext.length < 2}>Search</button>
             </form>
@@ -182,8 +254,7 @@ function App() {
             transition={{ duration: 0.5, ease: 'easeInOut' }}
           >
             <div className="flex items-center justify-between px-2 mb-4">
-              <div className='flex gap-6 items-center'>
-                <img className='h-5 cursor-pointer' onClick={() => setSearch(false)} src="/arrow.png" alt="arrow" />
+              <div className='flex justify-center items-center'>
                 <h5 className="text-xl self-center font-bold leading-none text-gray-900 dark:text-neutral-300">Search your friends</h5>
               </div>
             </div>
@@ -259,67 +330,77 @@ function App() {
             )
           })}
 
-          {(profilevisibility && !search) && <div className='flex flex-col m-5 items-center justify-center'>
+          {(profilevisibility && !search) && <motion.div className='flex flex-col m-5 items-center justify-center'
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.5, ease: 'easeInOut' }}
+          >
 
             <div className="relative cursor-pointer">
               <div className="relative inline-flex items-center justify-center w-28 h-28 overflow-hidden bg-gradient-to-t from-[#7345be] via-[#7d53bf] to-[#9667e3] rounded-full">
                 <span className="text-5xl font-bold text-gray-600 dark:text-gray-300">
-                  HC
-                  {/* {name.name.split(' ').length > 1
-                    ? `${name.name.split(' ')[0][0].toUpperCase()}${name.name.split(' ')[1][0].toUpperCase()}`
-                    : name.name[0].toUpperCase()} */}
+                  {userdata?.user && userdata.user.fname.split(' ').length > 1
+                    ? `${userdata.user.fname.split(' ')[0][0].toUpperCase()}${userdata.user.fname.split(' ')[1][0].toUpperCase()}`
+                    : userdata?.user.fname[0].toUpperCase()}
                 </span>
               </div>
               <span className={`top-0 left-20 absolute w-7 h-7 bg-green-400 border-2 border-white dark:border-gray-800 rounded-full`} ></span>
             </div>
-            <div className='text-3xl text-neutral-300 font-bold mt-2'>Het_duv645</div>
-            <div className='text-xl text-neutral-400 font-semibold'>Het@mail.com</div>
+            <div className='text-3xl text-neutral-300 font-bold mt-2'>{userdata?.user.username}</div>
+            <div className='text-xl text-neutral-400 font-semibold'>{userdata?.user.email}</div>
 
-            <form className='w-full px-5 mt-10 flex flex-col gap-3'>
+            <form onSubmit={profilesubmit} className='w-full px-5 mt-10 flex flex-col gap-3'>
 
               <label htmlFor="helper-text" className="block text-sm font-medium text-gray-900 dark:text-white">Full Name</label>
-              <input type="email" id="helper-text" aria-describedby="helper-text-explanation" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder={`Het Chawda`} />
+              <input onChange={handlechange} name='fname' type="text" id="helper-text" value={profiledata.fname} aria-describedby="helper-text-explanation" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder={`${profiledata.fname}`} required />
 
               <label htmlFor="helper-text" className="block text-sm font-medium text-gray-900 dark:text-white">Description</label>
-              <textarea id="message" rows={4} className="block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder={`Write your description here...`}></textarea>
+              <textarea id="message" rows={4} name='description' value={profiledata.description} onChange={handlechange} className="block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder={profiledata.description.length !== 0 ? `${profiledata.description} ` : 'Write your description here...'} required></textarea>
 
-              <h3 className="font-semibold text-gray-900 dark:text-white">Gender</h3>
-              <ul className="w-48 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                <li className="w-full border-b border-gray-200 rounded-t-lg dark:border-gray-600">
-                  <div className="flex items-center ps-3">
-                    <input id="male" type="radio" value="" name="male" className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500" />
-                    <label htmlFor="male" className="w-full py-3 ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">Male</label>
-                  </div>
-                </li>
-                <li className="w-full border-b border-gray-200 rounded-t-lg dark:border-gray-600">
-                  <div className="flex items-center ps-3">
-                    <input id="female" type="radio" value="" name="female" className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500" />
-                    <label htmlFor="female" className="w-full py-3 ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">Female</label>
-                  </div>
-                </li>
-                <li className="w-full border-b border-gray-200 rounded-t-lg dark:border-gray-600">
-                  <div className="flex items-center ps-3">
-                    <input id="others" type="radio" value="" name="others" className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500" />
-                    <label htmlFor="others" className="w-full py-3 ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">Others</label>
-                  </div>
-                </li>
+              <label htmlFor="countries" className="block text-sm font-medium text-gray-900 dark:text-white">Gender</label>
+              <select
+                id="countries"
+                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                value={profiledata.gender}
+                onChange={(e) => setProfiledata({ ...profiledata, gender: e.target.value })}
+              >
+                <option value={profiledata.gender}>
+                  {profiledata.gender || "Prefer not to say"}
+                </option>
+                {profiledata.gender !== "Male" && <option value="Male">Male</option>}
+                {profiledata.gender !== "Female" && <option value="Female">Female</option>}
+                {profiledata.gender !== "Others" && <option value="Others">Others</option>}
+                {profiledata.gender && <option value="">Prefer not to say</option>}
+              </select>
 
-              </ul>
-              <button className="relative w-fit self-center mt-5 inline-flex items-center justify-center p-0.5 mb-2 me-2 overflow-hidden text-sm font-medium text-gray-900 rounded-lg group bg-gradient-to-br from-purple-600 to-blue-500 group-hover:from-purple-600 group-hover:to-blue-500 hover:text-white dark:text-white focus:ring-4 focus:outline-none focus:ring-blue-300 dark:focus:ring-blue-800">
+              <button type='submit' className="relative w-fit self-center mt-5 inline-flex items-center justify-center p-0.5 mb-2 me-2 overflow-hidden text-sm font-medium text-gray-900 rounded-lg group bg-gradient-to-br from-purple-600 to-blue-500 group-hover:from-purple-600 group-hover:to-blue-500 hover:text-white dark:text-white focus:ring-4 focus:outline-none focus:ring-blue-300 dark:focus:ring-blue-800">
                 <span className="relative px-5 py-2 transition-all ease-in duration-75 bg-white dark:bg-gray-900 rounded-md group-hover:bg-transparent group-hover:dark:bg-transparent">
                   Save
                 </span>
               </button>
             </form>
 
-          </div>
+          </motion.div>
           }
 
-        </div>
+        </div >
 
         <div className='w-[73%] min-h-full bg-[url("/default.jpg")] bg-cover'>
 
+          <Chat />
 
+
+          {/*
+          <button data-popover-target="popover-bottom" data-popover-placement="bottom" type="button" className="text-white mb-3 me-4 bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">Bottom popover</button>
+          <div data-popover id="popover-bottom" role="tooltip" className="absolute z-20 w-64 text-sm text-gray-500 transition-opacity duration-300 bg-white border border-gray-200 rounded-lg shadow-xs dark:text-gray-400 dark:border-gray-600 dark:bg-gray-800">
+            <div className="px-3 py-2 bg-gray-100 border-b border-gray-200 rounded-t-lg dark:border-gray-600 dark:bg-gray-700">
+              <h3 className="font-semibold text-gray-900 dark:text-white">Popover bottom</h3>
+            </div>
+            <div className="px-3 py-2">
+              <p>And here's some amazing content. It's very engaging. Right?</p>
+            </div>
+            <div data-popper-arrow></div>
+          </div> */}
 
           {/* // message ui */}
 
@@ -377,7 +458,7 @@ function App() {
           </form> */}
 
         </div>
-      </div>
+      </div >
     </>
   )
 }

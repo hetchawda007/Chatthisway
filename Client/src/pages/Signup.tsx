@@ -53,11 +53,13 @@ const Signup = () => {
   const handlechange = (e: any) => {
     const { name, value } = e.target;
     if (name === 'username') {
-      setFormData({ ...formData, [name]: value.replace(/[^a-zA-Z0-9_]/g, '') });
+      setFormData({ ...formData, [name]: value.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase() });
     } else if (name === 'fname') {
       setFormData({ ...formData, [name]: value.replace(/[^a-zA-Z\s]/g, '') });
     } else if (name === 'password' || name === 'repeatPassword') {
       setFormData({ ...formData, [name]: value.replace(/\s/g, '') });
+    } else if (name === 'email') {
+      setFormData({ ...formData, [name]: value.toLowerCase() });
     } else {
       setFormData({ ...formData, [name]: value });
     }
@@ -82,7 +84,7 @@ const Signup = () => {
     }
 
     if (formData.password !== formData.repeatPassword) {
-      toast(`Passwords do not match ${formData.password} ${formData.repeatPassword}`, {
+      toast.error(`Passwords do not match ${formData.password} ${formData.repeatPassword}`, {
         position: "bottom-center",
         autoClose: 3000,
         hideProgressBar: false,
@@ -95,7 +97,7 @@ const Signup = () => {
       return;
     }
     else if (formData.username === formData.email) {
-      toast('Username and Email cannot be same', {
+      toast.error('Username and Email cannot be same', {
         position: "bottom-center",
         autoClose: 3000,
         hideProgressBar: false,
@@ -108,7 +110,7 @@ const Signup = () => {
       return;
     }
     else if (formData.password.length < 8 || !/[A-Z]/.test(formData.password) || !/[a-z]/.test(formData.password) || !/[0-9]/.test(formData.password) || !/[!@#$%^&*]/.test(formData.password)) {
-      toast('Password must be at least 8 characters long and include uppercase, lowercase, number, and special character', {
+      toast.error('Password must be at least 8 characters long and include uppercase, lowercase, number, and special character', {
         position: "bottom-center",
         autoClose: 5000,
         hideProgressBar: false,
@@ -121,7 +123,7 @@ const Signup = () => {
       return;
     }
     if (formData.username.length < 6) {
-      toast('Username must contain more than 5 letters', {
+      toast.error('Username must contain more than 5 letters', {
         position: "bottom-center",
         autoClose: 3000,
         hideProgressBar: false,
@@ -145,7 +147,7 @@ const Signup = () => {
         }
       });
       if (res.data.result === false) {
-        toast('Username or Email already exists', {
+        toast.error('Username or Email already exists', {
           position: "bottom-center",
           autoClose: 3000,
           hideProgressBar: false,

@@ -48,7 +48,7 @@ const Login = () => {
     }
     checkuser()
     if (islocaation === 'true') {
-      toast('Password Changed Successfully', {
+      toast.success('Password updated Successfully', {
         position: "bottom-center",
         autoClose: 3000,
         hideProgressBar: false,
@@ -83,7 +83,7 @@ const Login = () => {
     }
 
     if (usermail.length === 0) {
-      toast('Fill your username or email please', {
+      toast.error('Fill your username or email please', {
         position: "bottom-center",
         autoClose: 3000,
         hideProgressBar: false,
@@ -96,7 +96,7 @@ const Login = () => {
       setUsermail('')
     }
     else if (usermail.length <= 5) {
-      toast('Enter correct username or password', {
+      toast.error('Enter correct username or password', {
         position: "bottom-center",
         autoClose: 3000,
         hideProgressBar: false,
@@ -133,7 +133,7 @@ const Login = () => {
         code?.setCode(sendotp)
         Navigate(`/verifyotp/${sendotp}`)
       } else {
-        toast('User not found', {
+        toast.error('User not found', {
           position: "bottom-center",
           autoClose: 3000,
           hideProgressBar: false,
@@ -174,7 +174,7 @@ const Login = () => {
     })
 
     if (res.data.result === false) {
-      toast('Incorrect username or Email', {
+      toast.error('Incorrect username or Email', {
         position: "bottom-center",
         autoClose: 3000,
         hideProgressBar: false,
@@ -199,7 +199,7 @@ const Login = () => {
         const isMatch = await bcrypt.compare(password, res.data.password);
 
         if (!isMatch) {
-          toast('Incorrect Password', {
+          toast.error('Incorrect Password', {
             position: "bottom-center",
             autoClose: 3000,
             hideProgressBar: false,

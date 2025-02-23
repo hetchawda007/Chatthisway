@@ -52,7 +52,7 @@ const Resetpass = () => {
         e.preventDefault()
         setLoad(true)
         if (password !== repeatPassword) {
-            toast('Passwords do not match', {
+            toast.error('Passwords do not match', {
                 position: "bottom-center",
                 autoClose: 5000,
                 hideProgressBar: false,
@@ -65,7 +65,7 @@ const Resetpass = () => {
             return;
         }
         else if (password.length < 8 || !/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password) || !/[!@#$%^&*]/.test(password)) {
-            toast('Password must be at least 8 characters long and include uppercase, lowercase, number, and special character', {
+            toast.error('Password must be at least 8 characters long and include uppercase, lowercase, number, and special character', {
                 position: "bottom-center",
                 autoClose: 5000,
                 hideProgressBar: false,
@@ -88,7 +88,7 @@ const Resetpass = () => {
             const isMatch = await bcrypt.compare(password, res.data.password)
 
             if (isMatch) {
-                toast('Password cannot be same as old password', {
+                toast.error('Password cannot be same as old password', {
                     position: "bottom-center",
                     autoClose: 5000,
                     hideProgressBar: false,

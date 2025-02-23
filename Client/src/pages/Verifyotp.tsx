@@ -86,7 +86,7 @@ const Verifyotp = () => {
         setLoad(true);
         setOtp(Array(6).fill(""));
         if (otp.join("") !== sendotp.toString()) {
-            toast('Incorrect Otp', {
+            toast.error('Incorrect Otp', {
                 position: "bottom-center",
                 autoClose: 5000,
                 hideProgressBar: false,
