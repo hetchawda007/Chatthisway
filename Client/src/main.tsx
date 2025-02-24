@@ -34,17 +34,7 @@ const Main = () => {
   const [code, setCode] = useState('564751');
   const [users, setUsers] = useState<users[]>([]);
   const [userdata, setUserdata] = useState({
-    email: '',
-    username: '',
-    password: '',
-    repeatPassword: '',
-    fname: '',
-    description: '',
-    signatureprivatekey: '',
-    signaturepublickey: '',
-    cryptoprivatekey: '',
-    cryptopublickey: '',
-    gender: ''
+    email: '', username: '', password: '', repeatPassword: '', fname: '', description: '', signatureprivatekey: '', signaturepublickey: '', cryptoprivatekey: '', cryptopublickey: '', gender: ''
   });
 
   return (

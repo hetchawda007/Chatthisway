@@ -20,6 +20,7 @@
     "react-router": "^7.1.5",
     "react-router-dom": "^7.1.5",
     "react-toastify": "^11.0.3",
+    "socket.io-client": "^4.8.1",
     "tweetnacl": "^1.0.3",
     "tweetnacl-util": "^0.15.1"
   },

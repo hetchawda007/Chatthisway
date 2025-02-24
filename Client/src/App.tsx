@@ -21,22 +21,21 @@ function App() {
   }
 
   const Users = useContext(Userscontext)
-  const [cryptokey, setCryptokey] = useState('')
-  const [signkey, setSignkey] = useState('')
   const [profiledata, setProfiledata] = useState({ fname: '', description: '', gender: '' })
   const userdata = useContext(Userdata)
   const { username } = useParams()
+
   const Navigate = useNavigate()
   const samplenames = [
-    { name: 'Alice Johnson', username: 'alicej', lastmessage: 'Hey, how are you doing?', date: '01/10/2023', isonline: true, messagecount: 2 },
-    { name: 'Bob Smith', username: 'bobsmith', lastmessage: 'Can we reschedule our meeting?', date: '30/09/2023', isonline: false, messagecount: 0 },
-    { name: 'Charlie Brown', username: 'charlieb', lastmessage: 'I have sent the documents.', date: '29/09/2023', isonline: true, messagecount: 1 },
-    { name: 'Diana Prince', username: 'dianap', lastmessage: 'Let’s catch up tomorrow.', date: '28/09/2023', isonline: false, messagecount: 5 },
-    { name: 'Eve Adams', username: 'evea', lastmessage: 'Thank you for your help!', date: '27/09/2023', isonline: true, messagecount: 0 },
-    { name: 'Frank Castle', username: 'frankc', lastmessage: 'I will get back to you soon.', date: '26/09/2023', isonline: false, messagecount: 3 },
-    { name: 'Grace Hopper', username: 'graceh', lastmessage: 'Can you review this code?', date: '25/09/2023', isonline: true, messagecount: 0 },
-    { name: 'Hank Pym', username: 'hankp', lastmessage: 'Meeting is confirmed for 3 PM.', date: '24/09/2023', isonline: false, messagecount: 1 },
-    { name: 'Ivy League', username: 'ivyl', lastmessage: 'Looking forward to our collaboration.', date: '23/09/2023', isonline: true, messagecount: 0 }
+    { name: 'Alice Johnson', username: 'alicej', lastmessage: 'Hey, how are you doing?', date: '01/10/2023', messagecount: 2 },
+    { name: 'Bob Smith', username: 'bobsmith', lastmessage: 'Can we reschedule our meeting?', date: '30/09/2023', messagecount: 0 },
+    { name: 'Charlie Brown', username: 'charlieb', lastmessage: 'I have sent the documents.', date: '29/09/2023', messagecount: 1 },
+    { name: 'Diana Prince', username: 'dianap', lastmessage: 'Let’s catch up tomorrow.', date: '28/09/2023', messagecount: 5 },
+    { name: 'Eve Adams', username: 'evea', lastmessage: 'Thank you for your help!', date: '27/09/2023', messagecount: 0 },
+    { name: 'Frank Castle', username: 'frankc', lastmessage: 'I will get back to you soon.', date: '26/09/2023', messagecount: 3 },
+    { name: 'Grace Hopper', username: 'graceh', lastmessage: 'Can you review this code?', date: '25/09/2023', messagecount: 0 },
+    { name: 'Hank Pym', username: 'hankp', lastmessage: 'Meeting is confirmed for 3 PM.', date: '24/09/2023', messagecount: 1 },
+    { name: 'Ivy League', username: 'ivyl', lastmessage: 'Looking forward to our collaboration.', date: '23/09/2023', messagecount: 0 }
   ]
 
   const [users, setUsers] = useState<user[]>([])
@@ -44,7 +43,6 @@ function App() {
   const [searchtext, setSearchtext] = useState('')
   const [search, setSearch] = useState(false)
   const [profilevisibility, setProfilevisibility] = useState(false)
-
   useEffect(() => {
     const check = async () => {
       const res = await checkcookie()
@@ -76,6 +74,10 @@ function App() {
         Users?.setUsers(resp)
         setUsers(response.data)
 
+        await axios.post("http://localhost:8080/api/isonline", { username: username, isonline: true });
+        let user = await axios.post(`http://localhost:8080/api/userdata`, { username: res.username }, { headers: { 'Content-Type': 'application/json' } })
+        setProfiledata({ fname: user.data.fname, description: user.data.description, gender: user.data.gender })
+
         try {
           const dbRequest = indexedDB.open("Credentials", 1);
           dbRequest.onsuccess = function () {
@@ -84,9 +86,10 @@ function App() {
             const store = tx.objectStore("users");
 
             const getRequest = store.get(1);
-            getRequest.onsuccess = function () {
-              setCryptokey(getRequest.result.cryptokey)
-              setSignkey(getRequest.result.signinkey)
+            getRequest.onsuccess = async function () {
+              user.data.signatureprivatekey = await getRequest.result.signinkey;
+              user.data.cryptoprivatekey = await getRequest.result.cryptokey;
+              userdata?.setUser(user.data)
             };
           };
 
@@ -96,14 +99,17 @@ function App() {
         } catch (error) {
           console.error("Error accessing IndexedDB:", error);
         }
-
-        let user = await axios.post(`http://localhost:8080/api/userdata`, { username: res.username }, { headers: { 'Content-Type': 'application/json' } })
-        setProfiledata({ fname: user.data.fname, description: user.data.description, gender: user.data.gender })
-        user.data.signatureprivatekey = signkey;
-        user.data.cryptoprivatekey = cryptokey;
-        userdata?.setUser(user.data)
-        Navigate(`/dashboard/${res.username}`)
+        await Navigate(`/dashboard/${res.username}`)
       }
+      const handleTabClose = async (username: string) => {
+        await axios.post("http://localhost:8080/api/isonline", { username: username, isonline: false });
+      };
+
+      window.addEventListener("beforeunload", () => handleTabClose(username!));
+
+      return () => {
+        window.removeEventListener("beforeunload", () => handleTabClose(username!));
+      };
     }
     check()
   }, [])
@@ -157,6 +163,7 @@ function App() {
   }
 
   const handlechat = (user: ChatUser) => {
+    setProfilevisibility(false)
     setSearch(false)
     Navigate(`/dashboard/${username}/${user.username}`)
   }
@@ -200,7 +207,7 @@ function App() {
       />
       <div className="container mx-auto flex h-screen">
 
-        <div className='w-[27%] overflow-y-auto min-h-full bg-gradient-to-t from-[#1a1a1a] via-[#272727] to-[#313131]'>
+        <div className='w-[25%] overflow-y-auto min-h-full bg-gradient-to-t from-[#1a1a1a] via-[#272727] to-[#313131]'>
 
           <div className='flex mb-4 items-center gap-4 justify-center pt-3 pl-3'>
             <div>
@@ -222,7 +229,7 @@ function App() {
                     <a className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-[#000000] dark:hover:text-white">Search</a>
                   </li>
                   <li className='cursor-pointer' onClick={() => { setProfilevisibility(true); setDropdown(false); setSearch(false) }} >
-                    <a href='#profile' className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-[#000000] dark:hover:text-white">Profile</a>
+                    <a className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-[#000000] dark:hover:text-white">Profile</a>
                   </li>
                 </ul>
                 <div onClick={handlelogout} className="py-1 cursor-pointer dark:hover:bg-[#000000] rounded-b-xl">
@@ -239,7 +246,7 @@ function App() {
                     <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z" />
                   </svg>
                 </div>
-                <input onClick={searchclick} onChange={(e) => {
+                <input autoComplete='off' onClick={searchclick} onChange={(e) => {
                   setSearchtext(e.target.value); setProfilevisibility(false)
                 }} value={searchtext} name='search' type="search" id="default-search" className="block w-full py-2 ps-10 text-gray-900 border border-gray-300 rounded-full bg-gray-50 focus:ring-blue-500 focus:border-blue-500 hover:border-blue-100 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder="Search" required />
               </div>
@@ -265,8 +272,8 @@ function App() {
                     <li key={user.username} className="py-3 sm:py-4">
                       <div className="flex items-center">
                         <div className="relative cursor-pointer">
-                          <div className="relative inline-flex items-center justify-center w-14 h-14 overflow-hidden bg-gradient-to-t from-[#7345be] via-[#7d53bf] to-[#9667e3] rounded-full">
-                            <span className="text-2xl font-semibold text-gray-600 dark:text-gray-300">
+                          <div className="relative inline-flex items-center justify-center w-12 h-12 overflow-hidden bg-gradient-to-t from-[#7345be] via-[#7d53bf] to-[#9667e3] rounded-full">
+                            <span className="text-xl font-semibold text-gray-600 dark:text-gray-300">
                               {user.fname.split(' ').length > 1
                                 ? `${user.fname.split(' ')[0][0].toUpperCase()}${user.fname.split(' ')[1][0].toUpperCase()}`
                                 : user.fname[0].toUpperCase()}
@@ -274,7 +281,7 @@ function App() {
                           </div>
                         </div>
                         <div className="flex-1 leading-none min-w-0 ms-4">
-                          <p className="text-lg font-medium text-gray-900 truncate dark:text-white">
+                          <p className="text-gray-900 truncate dark:text-white">
                             {user.fname}
                           </p>
                           <p className="text-sm text-gray-500 truncate dark:text-gray-400">
@@ -282,7 +289,7 @@ function App() {
                           </p>
                         </div>
                         <div onClick={() => handlechat(user)} className="inline-flex items-center text-base font-semibold text-gray-900 dark:text-white">
-                          <button type="button" className="text-white bg-gradient-to-r from-purple-500 via-purple-600 to-purple-700 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-purple-300 dark:focus:ring-purple-800 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-2">Chat</button>
+                          <button type="button" className="text-white bg-gradient-to-r from-purple-500 via-purple-600 to-purple-700 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-purple-300 dark:focus:ring-purple-800 font-medium rounded-lg text-sm px-4 py-2 text-center me-2 mb-2">Chat</button>
                         </div>
                       </div>
                     </li>
@@ -294,8 +301,6 @@ function App() {
               </ul>
             </div>
           </motion.div>}
-
-
 
           {(!search && !profilevisibility) && samplenames.map((name) => {
             return (
@@ -313,9 +318,8 @@ function App() {
                           : name.name[0].toUpperCase()}
                       </span>
                     </div>
-                    <span className={`${name.isonline ? 'block' : 'hidden'} top-0 left-10 absolute w-[18px] h-[18px] bg-green-400 border-2 border-white dark:border-gray-800 rounded-full`} ></span>
                   </div>
-                  <div className='flex flex-col max-w-56 justify-center'>
+                  <div className='flex flex-col max-w-52 justify-center'>
                     <div className='text-white leading-none font-semibold text-lg'>{name.name}</div>
                     <div className='w-full text-neutral-400 truncate font-thin text-sm'>{name.lastmessage}</div>
                   </div>
@@ -384,80 +388,7 @@ function App() {
           }
 
         </div >
-
-        <div className='w-[73%] min-h-full bg-[url("/default.jpg")] bg-cover'>
-
-          <Chat />
-
-
-          {/*
-          <button data-popover-target="popover-bottom" data-popover-placement="bottom" type="button" className="text-white mb-3 me-4 bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">Bottom popover</button>
-          <div data-popover id="popover-bottom" role="tooltip" className="absolute z-20 w-64 text-sm text-gray-500 transition-opacity duration-300 bg-white border border-gray-200 rounded-lg shadow-xs dark:text-gray-400 dark:border-gray-600 dark:bg-gray-800">
-            <div className="px-3 py-2 bg-gray-100 border-b border-gray-200 rounded-t-lg dark:border-gray-600 dark:bg-gray-700">
-              <h3 className="font-semibold text-gray-900 dark:text-white">Popover bottom</h3>
-            </div>
-            <div className="px-3 py-2">
-              <p>And here's some amazing content. It's very engaging. Right?</p>
-            </div>
-            <div data-popper-arrow></div>
-          </div> */}
-
-          {/* // message ui */}
-
-          {/* <div className="flex items-start gap-2.5">
-            <img className="w-8 h-8 rounded-full" src="/logo.webp" alt="Jese image" />
-              <div className="flex flex-col gap-1 w-full max-w-[320px]">
-                <div className="flex items-center space-x-2 rtl:space-x-reverse">
-                  <span className ="text-sm font-semibold text-gray-900 dark:text-white">Bonnie Green</span>
-                  <span className ="text-sm font-normal text-gray-500 dark:text-gray-400">11:46</span>
-                </div>
-                <div className="flex flex-col leading-1.5 p-4 border-gray-200 bg-gray-100 rounded-e-xl rounded-es-xl dark:bg-gray-700">
-                  <p className="text-sm font-normal text-gray-900 dark:text-white"> That's awesome. I think our users will really appreciate the improvements.</p>
-                </div>
-                <span className ="text-sm font-normal text-gray-500 dark:text-gray-400">Delivered</span>
-              </div>
-              <button id="dropdownMenuIconButton" data-dropdown-toggle="dropdownDots" data-dropdown-placement="bottom-start" className="inline-flex self-center items-center p-2 text-sm font-medium text-center text-gray-900 bg-white rounded-lg hover:bg-gray-100 focus:ring-4 focus:outline-none dark:text-white focus:ring-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800 dark:focus:ring-gray-600" type="button">
-                <svg className="w-4 h-4 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 4 15">
-                  <path d="M3.5 1.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 6.041a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 5.959a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" />
-                </svg>
-              </button>
-              <div id="dropdownDots" className="z-10 bg-white divide-y divide-gray-100 rounded-lg shadow-sm w-40 dark:bg-gray-700 dark:divide-gray-600">
-                <ul className ="py-2 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownMenuIconButton">
-                  <li>
-                    <a href="#" className ="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">Reply</a>
-                  </li>
-                  <li>
-                    <a href="#" className ="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">Forward</a>
-                  </li>
-                  <li>
-                    <a href="#" className ="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">Copy</a>
-                  </li>
-                  <li>
-                    <a href="#" className ="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">Report</a>
-                  </li>
-                  <li>
-                    <a href="#" className ="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">Delete</a>
-                  </li>
-                </ul>
-              </div>
-          </div> */}
-
-          {/* //messsage write ui */}
-
-          {/* <form>
-            <label htmlFor="chat" className="sr-only">Your message</label>
-            <div className="flex items-center px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-700">
-              <textarea id="chat" rows={1} className="block mx-4 p-2.5 w-full text-sm text-gray-900 bg-white rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder="Your message..."></textarea>
-              <button type="submit" className="inline-flex justify-center p-2 text-blue-600 rounded-full cursor-pointer hover:bg-blue-100 dark:text-blue-500 dark:hover:bg-gray-600">
-                <svg className="w-5 h-5 rotate-90 rtl:-rotate-90" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 18 20">
-                  <path d="m17.914 18.594-8-18a1 1 0 0 0-1.828 0l-8 18a1 1 0 0 0 1.157 1.376L8 18.281V9a1 1 0 0 1 2 0v9.281l6.758 1.689a1 1 0 0 0 1.156-1.376Z" />
-                </svg>
-                <span className="sr-only">Send message</span>
-              </button>
-            </div>
-          </form> */}
-
-        </div>
+        <Chat />
       </div >
     </>
   )

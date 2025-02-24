@@ -11,12 +11,12 @@ router.post('/createcookie', async (req, res) => {
         const token = jwt.sign(
             { email: user.email, passwordversion: user.passwordversion }, process.env.JWT_SECRET || "fallbackSecret", { expiresIn: "7d" }
         );
-
+        res.clearCookie("token");
         res.cookie("token", token, {
             httpOnly: true, // Prevents JavaScript access
             secure: process.env.NODE_ENV === "production", // Only HTTPS in production
             sameSite: "strict", // Prevents CSRF attacks
-            maxAge: 60 * 60 * 168000 // 7 days
+            maxAge: 60 * 60 * 24 * 7 * 1000 // 7 days
         });
 
         res.json({ message: "Login successful" });

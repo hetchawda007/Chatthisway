@@ -13,6 +13,7 @@ router.get('/checkcookie', async (req, res) => {
         res.json({ message: "Protected content", username: user.username });
     } catch (error) {
         res.status(500).send('Error : ' + error.message);
+        console.log(error.message);
     }
 })
 
