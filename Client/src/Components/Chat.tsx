@@ -1,11 +1,10 @@
 import { useParams, useNavigate } from "react-router"
-import { useRef, useState, useEffect, useMemo, useContext } from "react"
+import { useRef, useState, useEffect, useMemo } from "react"
 import axios from "axios";
 import Message from "./Message";
 import { io } from "socket.io-client"
 import nacl from "tweetnacl";
 import naclUtil from "tweetnacl-util";
-import Userdata from "../Context/Userdata";
 
 interface encryptedMessageProps {
     encryptedmessage: string,
@@ -26,6 +25,21 @@ interface MessageProps {
     status: string
 }
 
+interface user {
+    isonline: boolean,
+    email: string,
+    username: string,
+    password: string,
+    repeatPassword: string,
+    fname: string
+    signatureprivatekey: string
+    signaturepublickey: string,
+    cryptoprivatekey: string
+    cryptopublickey: string
+    description: string
+    gender: string
+}
+
 interface newMessageProps {
     message: encryptedMessageProps,
     sender: string,
@@ -39,14 +53,15 @@ const Chat = () => {
     const { username = '' } = useParams();
     const { receiver = '' } = useParams();
     const Navigate = useNavigate()
-    const userdetails = useContext(Userdata)
+    const receiverdata = useRef<user>({ email: '', username: '', password: '', repeatPassword: '', fname: '', description: '', signatureprivatekey: '', signaturepublickey: '', cryptoprivatekey: '', cryptopublickey: '', gender: '', isonline: false })
+    const senderdata = useRef<user>({ email: '', username: '', password: '', repeatPassword: '', fname: '', description: '', signatureprivatekey: '', signaturepublickey: '', cryptoprivatekey: '', cryptopublickey: '', gender: '', isonline: false })
+    const [receiverdetails, setreceiverdetails] = useState<user>({ email: '', username: '', password: '', repeatPassword: '', fname: '', description: '', signatureprivatekey: '', signaturepublickey: '', cryptoprivatekey: '', cryptopublickey: '', gender: '', isonline: false })
     const [message, setmessage] = useState<string>('')
     const [profilevisibility, setprofilevisibility] = useState<boolean>(false)
     const [isuser, setIsuser] = useState(false)
     const textareaRef = useRef<HTMLInputElement>(null);
-    const [pendingMessages, setPendingMessages] = useState<MessageProps[]>([]);
     const [messages, setmessages] = useState<MessageProps[]>([])
-    const cryptokey = useRef('empty')
+    const keypair = useRef({ cryptokey: '', signaturekey: '' })
 
     const socket = useMemo(() => {
         try {
@@ -57,11 +72,9 @@ const Chat = () => {
         }
     }, []);
 
-    const [userdata, setuserdata] = useState({
-        email: '', username: '', password: '', repeatPassword: '', fname: '', description: '', signatureprivatekey: '', signaturepublickey: '', cryptoprivatekey: '', cryptopublickey: '', gender: '', isonline: false
-    })
 
     useEffect(() => {
+
         try {
             const dbRequest = indexedDB.open("Credentials", 1);
             dbRequest.onsuccess = function () {
@@ -71,8 +84,10 @@ const Chat = () => {
 
                 const getRequest = store.get(1);
                 getRequest.onsuccess = async function () {
-                    const key = await getRequest.result.cryptokey
-                    cryptokey.current = key;
+                    const cryptokey = await getRequest.result.cryptokey
+                    const signaturekey = await getRequest.result.signinkey
+                    keypair.current.cryptokey = cryptokey;
+                    keypair.current.signaturekey = signaturekey;
                 };
             };
 
@@ -82,56 +97,99 @@ const Chat = () => {
         } catch (error) {
             console.error("Error accessing IndexedDB:", error);
         }
+
+        const getdata = async () => {
+            await axios.post("http://localhost:8080/api/setstatus", { receiver: username, status: 'delivered' })
+            socket?.emit("user_status", username, true)
+            await axios.post("http://localhost:8080/api/isonline", { username: username, isonline: true });
+            let user = await axios.post(`http://localhost:8080/api/userdata`, { username: username }, { headers: { 'Content-Type': 'application/json' } })
+            receiverdata.current = user.data
+        }
+        getdata()
+
         socket?.on("connect", () => {
             console.log("connected", socket?.id);
         })
         socket?.on("receive_message", async (message: newMessageProps) => {
-            const sharedKey = deriveSharedSecret(cryptokey.current, message.cryptopublickey);
+            const sharedKey = deriveSharedSecret(keypair.current.cryptokey, senderdata.current.cryptopublickey);
             const decryptedmessage = await decryptMessage(message.message.encryptedmessage, message.message.iv, sharedKey);
-            const verifiedMessage = verifyMessage(decryptedmessage, message.signaturepublickey);
+            const verifiedMessage = verifyMessage(decryptedmessage, senderdata.current.signaturepublickey);
             if (!verifiedMessage) return console.log('unverified');
             setmessages(prevMessages => [...prevMessages, { message: { encryptedmessage: verifiedMessage, iv: message.message.iv }, sender: message.sender, receiver: message.receiver, status: message.status }])
+            const room = [username, receiver].sort().join('_')
+            socket?.emit("seen_message", room, username)
         })
+
+        socket?.on("message_status", async (room: string, username: string) => {
+            console.log(senderdata.current.username, username);
+            if (senderdata.current.username === username) {
+                setmessages(prevMessages =>
+                    prevMessages.map(msg => ({ ...msg, status: 'seen' }))
+                );
+                await axios.post("http://localhost:8080/api/setstatus", { room: room, status: 'seen' })
+            }
+        })
+
+        socket?.on("user_status", (username: string, status: boolean) => {
+            console.log(username, status);
+            console.log(senderdata.current.username, username);
+            if (senderdata.current.username === username) {
+                console.log(username, status);
+                setreceiverdetails(prev => ({ ...prev, isonline: status }))
+                setmessages(prevMessages => prevMessages.map(msg => ({ ...msg, status: msg.status === 'sent' ? 'delivered' : msg.status })))
+            }
+        })
+
+        const handleTabClose = async (username: string) => {
+            socket?.emit("user_status", username, false)
+            await axios.post("http://localhost:8080/api/isonline", { username: username, isonline: false });
+        };
+
+        window.addEventListener("beforeunload", () => handleTabClose(username!));
+
         return () => {
+            window.removeEventListener("beforeunload", () => handleTabClose(username!));
             socket?.disconnect()
-        }
+        };
+
     }, [])
 
     useEffect(() => {
+        // console.log(messages);
+    }, [messages])
+
+    useEffect(() => {
         const checkuser = async () => {
-            if (!receiver) return;
+            if (!receiver) return setIsuser(false);
             const chechuser = await axios.post("http://localhost:8080/api/auth", { usermail: receiver })
             if (!chechuser.data.result) {
+                console.log(chechuser.data);
                 Navigate("/404page")
                 return
             }
             else {
                 setIsuser(true)
             }
-            const res = await axios.post("http://localhost:8080/api/userdata", { username: receiver })
-            setuserdata(res.data)
+            setmessages([])
             const roomname = [username, receiver].sort().join('_')
-            const messages = await axios.post("http://localhost:8080/api/getmessages", { room: [username, receiver].sort().join('_') })
-            console.log(messages.data);
+            const res = await axios.post("http://localhost:8080/api/userdata", { username: receiver })
+            senderdata.current = res.data
+            setreceiverdetails(res.data)
+            const messages = await axios.post("http://localhost:8080/api/getmessages", { room: roomname })
+            console.log("messages :", messages.data);
             messages.data.forEach(async (message: MessageProps) => {
                 await processMessage(message);
             })
-            setmessages(messages.data)
-            socket?.emit("join_room", roomname)
+            if (messages.data[0].receiver === username) {
+                await axios.post("http://localhost:8080/api/setstatus", { room: roomname, status: 'seen' })
+            }
+            socket?.emit("join_room", roomname, username)
         }
         if (textareaRef.current) {
             textareaRef.current.focus();
         }
         checkuser()
     }, [receiver])
-
-    useEffect(() => {
-        if (userdetails?.user.cryptoprivatekey && pendingMessages.length > 0) {
-            console.log("Processing stored messages...");
-            pendingMessages.forEach((message) => processMessage(message));
-            setPendingMessages([]); // Clear stored messages after processing
-        }
-    }, [userdetails]);
 
     const deriveSharedSecret = (privateKey: any, recipientPublicKey: string) => {
         const privKeyUint8 = naclUtil.decodeBase64(privateKey);
@@ -161,20 +219,28 @@ const Chat = () => {
         const signedMessageUint8 = naclUtil.decodeBase64(signedMessage);
         const publicKeyUint8 = naclUtil.decodeBase64(publicKey);
         const verifiedMessage = nacl.sign.open(signedMessageUint8, publicKeyUint8);
-
         return verifiedMessage ? naclUtil.encodeUTF8(verifiedMessage) : null;
     };
 
     const processMessage = async (message: MessageProps) => {
-        if (!userdetails?.user.cryptoprivatekey) return;
-
-        const sharedKey = deriveSharedSecret(cryptokey.current, userdata.cryptopublickey);
+        if (!senderdata.current.cryptopublickey) return console.log('no public key');
+        const sharedKey = deriveSharedSecret(keypair.current.cryptokey, senderdata.current.cryptopublickey);
         const decryptedmessage = await decryptMessage(message.message.encryptedmessage, message.message.iv, sharedKey);
-        const verifiedMessage = verifyMessage(decryptedmessage, userdata.signaturepublickey);
-
-        if (!verifiedMessage) return console.log("Unverified message.");
-
-        console.log("Processed message:", verifiedMessage);
+        const verifiedMessage = verifyMessage(decryptedmessage, senderdata.current.signaturepublickey);
+        if (!verifiedMessage) {
+            const secondverifiedmessage = verifyMessage(decryptedmessage, receiverdata.current.signaturepublickey);
+            if (!secondverifiedmessage) return
+            setmessages((prevMessages) => [
+                ...prevMessages,
+                {
+                    message: { encryptedmessage: secondverifiedmessage, iv: message.message.iv },
+                    sender: message.sender,
+                    receiver: message.receiver,
+                    status: message.status
+                }
+            ]);
+            return
+        }
         setmessages((prevMessages) => [
             ...prevMessages,
             {
@@ -190,7 +256,6 @@ const Chat = () => {
 
     const handlesubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
-        if (!userdetails?.user.signatureprivatekey) return
 
         const signMessage = (message: string, privateKey: string) => {
             const messageUint8 = naclUtil.decodeUTF8(message);
@@ -221,14 +286,16 @@ const Chat = () => {
                 iv: naclUtil.encodeBase64(iv),
             };
         }
-        const signedMessage = signMessage(message, userdetails.user.signatureprivatekey);
-        const sharedKey = deriveSharedSecret(userdetails.user.cryptoprivatekey, userdata.cryptopublickey)
+
+        const sharedKey = deriveSharedSecret(keypair.current.cryptokey, senderdata.current.cryptopublickey)
+        const signedMessage = signMessage(message, keypair.current.signaturekey);
         const encryptedmessage = await encryptMessage(signedMessage, sharedKey)
         const room = [username, receiver].sort().join('_')
-        socket?.emit("send_message", { message: { message: { encryptedmessage: encryptedmessage.encryptedData, iv: encryptedmessage.iv }, sender: username, receiver: receiver, status: 'sent', signaturepublickey: userdetails.user.signaturepublickey, cryptopublickey: userdetails.user.cryptopublickey }, room: room })
-        setmessages([...messages, { message: { encryptedmessage: message, iv: encryptedmessage.iv }, sender: username, receiver: receiver, status: 'sent' }])
+        socket?.emit("send_message", { message: { message: { encryptedmessage: encryptedmessage.encryptedData, iv: encryptedmessage.iv }, sender: username, receiver: receiver, status: 'sent' }, room: room })
+        setmessages([...messages, { message: { encryptedmessage: message, iv: encryptedmessage.iv }, sender: username, receiver: receiver, status: receiverdetails?.isonline ? 'delivered' : 'sent' }])
         setmessage('')
-        const res = await axios.post("http://localhost:8080/api/savemessage", { message: { encryptedmessage: encryptedmessage.encryptedData, iv: encryptedmessage.iv }, sender: username, receiver: receiver, status: 'sent', room: room })
+
+        const res = await axios.post("http://localhost:8080/api/savemessage", { message: { encryptedmessage: encryptedmessage.encryptedData, iv: encryptedmessage.iv }, sender: username, receiver: receiver, status: receiverdetails?.isonline ? 'delivered' : 'sent', room: room })
     }
 
     return (
@@ -241,18 +308,18 @@ const Chat = () => {
                         <div className="relative">
                             <div className="relative inline-flex items-center justify-center w-10 h-10 overflow-hidden bg-gradient-to-t from-[#7345be] via-[#7d53bf] to-[#9667e3] rounded-full">
                                 <span className="text-lg font-bold text-gray-600 dark:text-gray-300">
-                                    {userdata.fname && userdata.fname.split(' ').length > 1
-                                        ? `${userdata.fname.split(' ')[0][0]?.toUpperCase() ?? ''}${userdata.fname.split(' ')[1][0]?.toUpperCase() ?? ''}`
-                                        : userdata.fname ? userdata.fname[0]?.toUpperCase() : ''}
+                                    {receiverdetails?.fname && receiverdetails?.fname.split(' ').length > 1
+                                        ? `${receiverdetails?.fname.split(' ')[0][0]?.toUpperCase() ?? ''}${receiverdetails?.fname.split(' ')[1][0]?.toUpperCase() ?? ''}`
+                                        : receiverdetails?.fname ? receiverdetails?.fname[0]?.toUpperCase() : ''}
                                 </span>
                             </div>
-                            {userdata.isonline ? <span className={`top-0 left-7 absolute w-4 h-4 bg-green-400 border-2 border-white dark:border-gray-800 rounded-full`} ></span>
+                            {receiverdetails?.isonline ? <span className={`top-0 left-7 absolute w-4 h-4 bg-green-400 border-2 border-white dark:border-gray-800 rounded-full`} ></span>
                                 : <span className={`top-0 left-7 absolute w-4 h-4 bg-red-600 border-2 border-white dark:border-gray-800 rounded-full`} ></span>
                             }
                         </div>
                         <div className="flex flex-col gap-1">
-                            <div className="font-bold text-neutral-300  leading-none text-lg">{userdata.username}</div>
-                            <div className=" leading-none text-neutral-500 text-sm">{userdata.fname}</div>
+                            <div className="font-bold text-neutral-300  leading-none text-lg">{receiverdetails?.username}</div>
+                            <div className=" leading-none text-neutral-500 text-sm">{receiverdetails?.fname}</div>
                         </div>
                     </div>
                 </div>
@@ -262,24 +329,24 @@ const Chat = () => {
                         <div className="relative">
                             <div className="relative inline-flex items-center justify-center w-10 h-10 overflow-hidden bg-gradient-to-t from-[#7345be] via-[#7d53bf] to-[#9667e3] rounded-full">
                                 <span className="text-lg font-bold text-gray-600 dark:text-gray-300">
-                                    {userdata.fname && userdata.fname.split(' ').length > 1
-                                        ? `${userdata.fname.split(' ')[0][0]?.toUpperCase() ?? ''}${userdata.fname.split(' ')[1][0]?.toUpperCase() ?? ''}`
-                                        : userdata.fname ? userdata.fname[0]?.toUpperCase() : ''}
+                                    {receiverdetails?.fname && receiverdetails?.fname.split(' ').length > 1
+                                        ? `${receiverdetails?.fname.split(' ')[0][0]?.toUpperCase() ?? ''}${receiverdetails?.fname.split(' ')[1][0]?.toUpperCase() ?? ''}`
+                                        : receiverdetails?.fname ? receiverdetails?.fname[0]?.toUpperCase() : ''}
                                 </span>
                             </div>
-                            {userdata.isonline ? <span className={`top-0 left-7 absolute w-4 h-4 bg-green-400 border-2 border-white dark:border-gray-800 rounded-full`} ></span>
+                            {receiverdetails?.isonline ? <span className={`top-0 left-7 absolute w-4 h-4 bg-green-400 border-2 border-white dark:border-gray-800 rounded-full`} ></span>
                                 : <span className={`top-0 left-7 absolute w-4 h-4 bg-red-600 border-2 border-white dark:border-gray-800 rounded-full`} ></span>
                             }
                         </div>
                         <div className="flex flex-col gap-1">
-                            <div className="font-bold text-neutral-300  leading-none text-lg">{userdata.username}</div>
-                            <div className=" leading-none text-neutral-500 text-sm">{userdata.fname}</div>
+                            <div className="font-bold text-neutral-300  leading-none text-lg">{receiverdetails?.username}</div>
+                            <div className=" leading-none text-neutral-500 text-sm">{receiverdetails?.fname}</div>
                         </div>
                     </div>
                     <div className="px-4 py-3 space-y-2">
-                        <p className="text-base"><strong className="text-neutral-200">Name:</strong> {userdata.fname}</p>
-                        <p className="text-base"><strong className="text-neutral-200">Description:</strong> {userdata.description ? userdata.description : 'Empty'}</p>
-                        <p className="text-base"><strong className="text-neutral-200">Gender:</strong> {userdata.gender ? userdata.gender : 'Not prefer to say'}</p>
+                        <p className="text-base"><strong className="text-neutral-200">Name:</strong> {receiverdetails?.fname}</p>
+                        <p className="text-base"><strong className="text-neutral-200">Description:</strong> {receiverdetails?.description ? receiverdetails?.description : 'Empty'}</p>
+                        <p className="text-base"><strong className="text-neutral-200">Gender:</strong> {receiverdetails?.gender ? receiverdetails?.gender : 'Not prefer to say'}</p>
                     </div>
                     <div data-popper-arrow></div>
                 </div>}

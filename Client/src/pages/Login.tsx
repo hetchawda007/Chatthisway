@@ -248,6 +248,7 @@ const Login = () => {
           };
           const cryptoprivatekey = await decryptPrivateKey(keys.data.cryptoprivatekey.encryptedKey, password, keys.data.cryptoprivatekey.iv, keys.data.cryptoprivatekey.salt);
           const signinprivatekey = await decryptPrivateKey(keys.data.signatureprivatekey.encryptedKey, password, keys.data.signatureprivatekey.iv, keys.data.signatureprivatekey.salt);
+          console.log(cryptoprivatekey, signinprivatekey);
           try {
             const dbRequest = indexedDB.open("Credentials", 1);
 

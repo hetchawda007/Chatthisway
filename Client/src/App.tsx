@@ -1,5 +1,5 @@
 import './App.css'
-import { useEffect, useState, useContext } from 'react'
+import { useEffect, useState, useContext, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router'
 import { checkcookie, deletecookie } from './Api/useAuth'
 import { motion } from 'framer-motion'
@@ -8,6 +8,8 @@ import Userdata from './Context/Userdata'
 import axios from 'axios'
 import { ToastContainer, toast } from 'react-toastify'
 import Chat from './Components/Chat'
+import SignupContext from './Context/Signupcontext'
+import { io } from "socket.io-client"
 
 function App() {
 
@@ -24,20 +26,30 @@ function App() {
   const [profiledata, setProfiledata] = useState({ fname: '', description: '', gender: '' })
   const userdata = useContext(Userdata)
   const { username } = useParams()
+  const Signupcontext = useContext(SignupContext)
+
+  const socket = useMemo(() => {
+    try {
+      return io(`http://localhost:8080`);
+    } catch (e) {
+      console.log('error connection');
+      return null;
+    }
+  }, []);
 
   const Navigate = useNavigate()
-  const samplenames = [
-    { name: 'Alice Johnson', username: 'alicej', lastmessage: 'Hey, how are you doing?', date: '01/10/2023', messagecount: 2 },
-    { name: 'Bob Smith', username: 'bobsmith', lastmessage: 'Can we reschedule our meeting?', date: '30/09/2023', messagecount: 0 },
-    { name: 'Charlie Brown', username: 'charlieb', lastmessage: 'I have sent the documents.', date: '29/09/2023', messagecount: 1 },
-    { name: 'Diana Prince', username: 'dianap', lastmessage: 'Let’s catch up tomorrow.', date: '28/09/2023', messagecount: 5 },
-    { name: 'Eve Adams', username: 'evea', lastmessage: 'Thank you for your help!', date: '27/09/2023', messagecount: 0 },
-    { name: 'Frank Castle', username: 'frankc', lastmessage: 'I will get back to you soon.', date: '26/09/2023', messagecount: 3 },
-    { name: 'Grace Hopper', username: 'graceh', lastmessage: 'Can you review this code?', date: '25/09/2023', messagecount: 0 },
-    { name: 'Hank Pym', username: 'hankp', lastmessage: 'Meeting is confirmed for 3 PM.', date: '24/09/2023', messagecount: 1 },
-    { name: 'Ivy League', username: 'ivyl', lastmessage: 'Looking forward to our collaboration.', date: '23/09/2023', messagecount: 0 }
+  const chatusers = [
+    { username: 'alicej', lastmessage: 'Hey, how are you doing?', date: '01/10/2023', messagecount: 2 },
+    { username: 'bobsmith', lastmessage: 'Can we reschedule our meeting?', date: '30/09/2023', messagecount: 0 },
+    { username: 'charlieb', lastmessage: 'I have sent the documents.', date: '29/09/2023', messagecount: 1 },
+    { username: 'dianap', lastmessage: 'Let’s catch up tomorrow.', date: '28/09/2023', messagecount: 5 },
+    { username: 'evea', lastmessage: 'Thank you for your help!', date: '27/09/2023', messagecount: 0 },
+    { username: 'frankc', lastmessage: 'I will get back to you soon.', date: '26/09/2023', messagecount: 3 },
+    { username: 'graceh', lastmessage: 'Can you review this code?', date: '25/09/2023', messagecount: 0 },
+    { username: 'hankp', lastmessage: 'Meeting is confirmed for 3 PM.', date: '24/09/2023', messagecount: 1 },
+    { username: 'ivyl', lastmessage: 'Looking forward to our collaboration.', date: '23/09/2023', messagecount: 0 }
   ]
-
+  
   const [users, setUsers] = useState<user[]>([])
   const [dropdown, setDropdown] = useState(false)
   const [searchtext, setSearchtext] = useState('')
@@ -74,7 +86,6 @@ function App() {
         Users?.setUsers(resp)
         setUsers(response.data)
 
-        await axios.post("http://localhost:8080/api/isonline", { username: username, isonline: true });
         let user = await axios.post(`http://localhost:8080/api/userdata`, { username: res.username }, { headers: { 'Content-Type': 'application/json' } })
         setProfiledata({ fname: user.data.fname, description: user.data.description, gender: user.data.gender })
 
@@ -101,15 +112,7 @@ function App() {
         }
         await Navigate(`/dashboard/${res.username}`)
       }
-      const handleTabClose = async (username: string) => {
-        await axios.post("http://localhost:8080/api/isonline", { username: username, isonline: false });
-      };
 
-      window.addEventListener("beforeunload", () => handleTabClose(username!));
-
-      return () => {
-        window.removeEventListener("beforeunload", () => handleTabClose(username!));
-      };
     }
     check()
   }, [])
@@ -302,9 +305,9 @@ function App() {
             </div>
           </motion.div>}
 
-          {(!search && !profilevisibility) && samplenames.map((name) => {
+          {(!search && !profilevisibility) && chatusers.map((name) => {
             return (
-              <motion.div key={name.name} onClick={() => handlechat(name)} className='flex items-center hover:bg-[#383838] rounded-xl mx-3 cursor-pointer justify-between p-3'
+              <motion.div key={name.username} onClick={() => handlechat(name)} className='flex items-center hover:bg-[#383838] rounded-xl mx-3 cursor-pointer justify-between p-3'
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ duration: 0.5, ease: 'easeInOut' }}
@@ -313,14 +316,14 @@ function App() {
                   <div className="relative cursor-pointer">
                     <div className="relative inline-flex items-center justify-center w-14 h-14 overflow-hidden bg-gradient-to-t from-[#7345be] via-[#7d53bf] to-[#9667e3] rounded-full">
                       <span className="text-2xl font-semibold text-gray-600 dark:text-gray-300">
-                        {name.name.split(' ').length > 1
-                          ? `${name.name.split(' ')[0][0].toUpperCase()}${name.name.split(' ')[1][0].toUpperCase()}`
-                          : name.name[0].toUpperCase()}
+                        {name.username.split(' ').length > 1
+                          ? `${name.username.split(' ')[0][0].toUpperCase()}${name.username.split(' ')[1][0].toUpperCase()}`
+                          : name.username[0].toUpperCase()}
                       </span>
                     </div>
                   </div>
                   <div className='flex flex-col max-w-52 justify-center'>
-                    <div className='text-white leading-none font-semibold text-lg'>{name.name}</div>
+                    <div className='text-white leading-none font-semibold text-lg'>{name.username}</div>
                     <div className='w-full text-neutral-400 truncate font-thin text-sm'>{name.lastmessage}</div>
                   </div>
                 </div>

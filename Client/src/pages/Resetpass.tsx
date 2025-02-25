@@ -103,76 +103,14 @@ const Resetpass = () => {
             }
             else {
 
-                try {
-                    const dbRequest = indexedDB.open("Credentials", 1);
-                    dbRequest.onsuccess = function () {
-                        const db = dbRequest.result;
-                        const tx = db.transaction("users", "readonly");
-                        const store = tx.objectStore("users");
-
-                        const getRequest = store.get(1);
-                        getRequest.onsuccess = function () {
-                            setCryptokey(getRequest.result.cryptokey)
-                            setSignkey(getRequest.result.signinkey)
-                        };
-                    };
-
-                    dbRequest.onerror = function () {
-                        console.error("Error opening database:", dbRequest.error);
-                    };
-                } catch (error) {
-                    console.error("Error accessing IndexedDB:", error);
-                }
-
-                const encryptPrivateKey = async (privateKey: string, password: string) => {
-                    const encoder = new TextEncoder();
-
-                    // Generate a salt for PBKDF2
-                    const salt = window.crypto.getRandomValues(new Uint8Array(16));
-
-                    // Derive encryption key using PBKDF2
-                    const keyMaterial = await window.crypto.subtle.importKey(
-                        "raw",
-                        encoder.encode(password),
-                        { name: "PBKDF2" },
-                        false,
-                        ["deriveKey"]
-                    );
-
-                    const derivedKey = await window.crypto.subtle.deriveKey(
-                        { name: "PBKDF2", salt, iterations: 100000, hash: "SHA-256" },
-                        keyMaterial,
-                        { name: "AES-GCM", length: 256 },
-                        false,
-                        ["encrypt"]
-                    );
-
-                    const iv = window.crypto.getRandomValues(new Uint8Array(12)); // Random IV
-
-                    // Encrypt the private key using AES-GCM
-                    const encrypted = await window.crypto.subtle.encrypt(
-                        { name: "AES-GCM", iv },
-                        derivedKey,
-                        encoder.encode(privateKey)
-                    );
-
-                    return {
-                        encryptedKey: naclUtil.encodeBase64(new Uint8Array(encrypted)),
-                        iv: naclUtil.encodeBase64(iv),
-                        salt: naclUtil.encodeBase64(salt),
-                    };
-                };
-
                 async function hashPassword(password: string) {
                     const salt = await bcrypt.genSalt(10);
                     const hashedPassword = await bcrypt.hash(password, salt);
                     return hashedPassword;
                 }
 
-                const encryptedCryptoKey = await encryptPrivateKey(cryptokey, password)
-                const encryptedSignKey = await encryptPrivateKey(signkey, password)
                 const hashedPassword = await hashPassword(password)
-                const res = await axios.put('http://localhost:8080/api/updatepass', { usermail: email, password: hashedPassword, cryptokey: encryptedCryptoKey, signinkey: encryptedSignKey },
+                const res = await axios.put('http://localhost:8080/api/updatepass', { usermail: email, password: hashedPassword },
                     {
                         headers: {
                             'Content-Type': 'application/json',

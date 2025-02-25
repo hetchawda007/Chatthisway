@@ -22,6 +22,7 @@ import Updateprofile from "./routes/Updateprofile.js"
 import Setisonline from "./routes/Setisonline.js"
 import Savemessage from "./routes/Savemessage.js"
 import Getmessages from "./routes/Getmessages.js"
+import Setstatus from "./routes/Setstatus.js"
 
 const app = express();
 dotenv.config();
@@ -51,6 +52,7 @@ app.use('/api', Updateprofile);
 app.use('/api', Setisonline);
 app.use('/api', Savemessage);
 app.use('/api', Getmessages);
+app.use('/api', Setstatus);
 
 const server = createServer(app);
 
@@ -63,16 +65,25 @@ const io = new Server(server, {
 
 io.on("connection", (socket) => {
   console.log("User connected", socket.id);
-  socket.on("join_room", (room) => {
+  socket.on("join_room", (room, username) => {
     socket.join(room);
-    console.log("User with id: " + socket.id + " joined room: " + room);
+    console.log(username + " joined room: " + room);
+    socket.to(room).emit("message_status", room, username);
   })
-  socket.on("send_message", async ({ message, room }) => {  
+  socket.on("send_message", async ({ message, room }) => {
     console.log(message);
     socket.to(room).emit("receive_message", message);
   })
+  socket.on("seen_message", (room, username) => {
+    console.log(username + " seen the message in room: " + room);
+    socket.to(room).emit("message_status", room, username);
+  })
   socket.on("disconnect", () => {
     console.log("User disconnected", socket.id);
+  })
+  socket.on("user_status", (username, status) => {
+    console.log(username + " is " + status);
+    socket.broadcast.emit("user_status", username, status);
   })
 })
 
