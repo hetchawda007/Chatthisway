@@ -8,7 +8,6 @@ import Userdata from './Context/Userdata'
 import axios from 'axios'
 import { ToastContainer, toast } from 'react-toastify'
 import Chat from './Components/Chat'
-import SignupContext from './Context/Signupcontext'
 import { io } from "socket.io-client"
 import nacl from "tweetnacl";
 import naclUtil from "tweetnacl-util";
@@ -17,13 +16,6 @@ import Chatusers from './Context/Chatusers'
 interface encryptedMessageProps {
   encryptedmessage: string,
   iv: string,
-}
-
-interface MessageProps {
-  message: encryptedMessageProps,
-  sender: string,
-  receiver: string,
-  status: string
 }
 
 interface user {
@@ -75,9 +67,7 @@ function App() {
   const userdata = useContext(Userdata)
   const { username } = useParams()
   const { receiver } = useParams()
-  const Signupcontext = useContext(SignupContext)
   const Navigate = useNavigate()
-  const [chatuserdata, setChatuserdata] = useState<chatusersprops[]>([])
   const chatuser = useContext(Chatusers)
   const [users, setUsers] = useState<user[]>([])
   const [dropdown, setDropdown] = useState(false)
@@ -260,7 +250,6 @@ function App() {
         }
       }
       await setdata()
-      chatuser?.setchatusers(chatuserdata)
     }
     func()
   }, [username])

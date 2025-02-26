@@ -5,7 +5,6 @@ import { IoEyeOffOutline } from "react-icons/io5";
 import { useParams, useNavigate } from "react-router";
 import axios from "axios";
 import bcrypt from "bcryptjs"
-import naclUtil from "tweetnacl-util";
 import Code from "../Context/Logincode";
 import Commonheader from "../Components/Commonheader";
 import { deletecookie } from "../Api/useAuth";
@@ -18,8 +17,6 @@ const Resetpass = () => {
     const [password, setPassword] = useState('')
     const [repeatPassword, setRepeatPassword] = useState('')
     const [visible, setVisible] = useState({ visible1: false, visible2: false })
-    const [cryptokey, setCryptokey] = useState('')
-    const [signkey, setSignkey] = useState('')
     const [load, setLoad] = useState(false)
     const ref1 = useRef<HTMLInputElement>(null)
     const ref2 = useRef<HTMLInputElement>(null)
@@ -110,7 +107,7 @@ const Resetpass = () => {
                 }
 
                 const hashedPassword = await hashPassword(password)
-                const res = await axios.put('http://localhost:8080/api/updatepass', { usermail: email, password: hashedPassword },
+                await axios.put('http://localhost:8080/api/updatepass', { usermail: email, password: hashedPassword },
                     {
                         headers: {
                             'Content-Type': 'application/json',

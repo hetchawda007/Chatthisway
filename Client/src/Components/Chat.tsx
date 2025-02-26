@@ -304,7 +304,7 @@ const Chat = () => {
         socket?.emit("send_message", { message: { message: { encryptedmessage: encryptedmessage.encryptedData, iv: encryptedmessage.iv }, sender: username, receiver: receiver, status: 'sent', cryptopublickey: receiverdata.current.cryptopublickey, signaturepublickey: receiverdata.current.signaturepublickey }, room: room })
         setmessages([...messages, { message: { encryptedmessage: message, iv: encryptedmessage.iv }, sender: username, receiver: receiver, status: receiverdetails?.isonline ? 'delivered' : 'sent' }])
         setmessage('')
-        const res = await axios.post("http://localhost:8080/api/savemessage", { message: { encryptedmessage: encryptedmessage.encryptedData, iv: encryptedmessage.iv }, sender: username, receiver: receiver, status: receiverdetails?.isonline ? 'delivered' : 'sent', room: room })
+        await axios.post("http://localhost:8080/api/savemessage", { message: { encryptedmessage: encryptedmessage.encryptedData, iv: encryptedmessage.iv }, sender: username, receiver: receiver, status: receiverdetails?.isonline ? 'delivered' : 'sent', room: room })
     }
 
     return (
