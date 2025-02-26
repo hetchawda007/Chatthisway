@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 const connectDB = async () => {
     try {
-        mongoose.connect('mongodb://localhost:27017/chatthisway');
+        mongoose.connect(`${process.env.MONGO_URI}`);
         console.log('MongoDB connected');
     } catch (error) {
         console.log('MongoDB connection failed');

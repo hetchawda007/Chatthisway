@@ -187,7 +187,7 @@ const Verifyotp = () => {
                 }
 
                 try {
-                    await axios.post('http://localhost:8080/api/createuser', {
+                    await axios.post(`${import.meta.env.VITE_SERVER_URL}/api/createuser`, {
                         username: creadentials?.credentials?.username || "",
                         email: creadentials?.credentials?.email || "",
                         publiccryptokey: cryptoKeyPair?.publicKey || "",

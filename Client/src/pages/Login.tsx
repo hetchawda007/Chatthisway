@@ -71,7 +71,7 @@ const Login = () => {
     if (!executeRecaptcha) { return }
     const token = await executeRecaptcha("submit");
 
-    const res = await axios.post('http://localhost:8080/api/verifyrecaptcha', { token: token }, {
+    const res = await axios.post(`${ import.meta.env.VITE_SERVER_URL }/api/verifyrecaptcha`, { token: token }, {
       headers: {
         'Content-Type': 'application/json'
       }
@@ -110,7 +110,7 @@ const Login = () => {
     }
     else {
       setLoad(true)
-      const response = await axios.post('http://localhost:8080/api/getemail', {
+      const response = await axios.post(`${ import.meta.env.VITE_SERVER_URL }/api/getemail`, {
         usermail: usermail,
       }, {
         headers: {
@@ -120,7 +120,7 @@ const Login = () => {
       })
 
       logincontext?.setUsermail(response.data.usermail)
-      const res = await axios.post('http://localhost:8080/api/auth', {
+      const res = await axios.post(`${ import.meta.env.VITE_SERVER_URL }/api/auth`, {
         usermail: usermail,
       }, {
         headers: {
@@ -156,7 +156,7 @@ const Login = () => {
     if (!executeRecaptcha) { return }
     const token = await executeRecaptcha("submit");
 
-    const response = await axios.post('http://localhost:8080/api/verifyrecaptcha', { token: token }, {
+    const response = await axios.post(`${ import.meta.env.VITE_SERVER_URL }/api/verifyrecaptcha`, { token: token }, {
       headers: {
         'Content-Type': 'application/json'
       }
@@ -165,7 +165,7 @@ const Login = () => {
       window.location.href = 'https://www.google.com';
     }
 
-    const res = await axios.post('http://localhost:8080/api/auth', {
+    const res = await axios.post(`${ import.meta.env.VITE_SERVER_URL }/api/auth`, {
       usermail: usermail,
     }, {
       headers: {
@@ -188,7 +188,7 @@ const Login = () => {
       setUsermail('')
     }
     else if (res.data.result === true) {
-      const res = await axios.post('http://localhost:8080/api/getpass', {
+      const res = await axios.post(`${ import.meta.env.VITE_SERVER_URL }/api/getpass`, {
         usermail: usermail,
       }, {
         headers: {
@@ -213,7 +213,7 @@ const Login = () => {
           setPassword('');
         } else {
 
-          const keys = await axios.post('http://localhost:8080/api/getcryptokeys', { usermail: usermail }, {
+          const keys = await axios.post(`${ import.meta.env.VITE_SERVER_URL }/api/getcryptokeys`, { usermail: usermail }, {
             headers: {
               'Content-Type': 'application/json'
             }

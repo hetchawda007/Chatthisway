@@ -77,7 +77,7 @@ function App() {
 
   const socket = useMemo(() => {
     try {
-      return io(`http://localhost:8080`);
+      return io(`${import.meta.env.VITE_SERVER_URL}`);
     } catch (e) {
       console.log('error connection');
       return null;
@@ -195,11 +195,11 @@ function App() {
         } catch (error) {
           console.error("Error accessing IndexedDB:", error);
         }
-        const response = await axios.get(`http://localhost:8080/api/getusers`)
+        const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/api/getusers`)
         const resp = response.data.filter((user: user) => user.username !== res.username)
         Users?.setUsers(resp)
         setUsers(response.data)
-        let user = await axios.post(`http://localhost:8080/api/userdata`, { username: res.username }, { headers: { 'Content-Type': 'application/json' } })
+        let user = await axios.post(`${import.meta.env.VITE_SERVER_URL}/api/userdata`, { username: res.username }, { headers: { 'Content-Type': 'application/json' } })
         setProfiledata({ fname: user.data.fname, description: user.data.description, gender: user.data.gender })
         await Navigate(`/dashboard/${res.username}`)
       }
@@ -235,13 +235,13 @@ function App() {
 
   useEffect(() => {
     const func = async () => {
-      let user = await axios.post(`http://localhost:8080/api/userdata`, { username: username }, { headers: { 'Content-Type': 'application/json' } })
+      let user = await axios.post(`${import.meta.env.VITE_SERVER_URL}/api/userdata`, { username: username }, { headers: { 'Content-Type': 'application/json' } })
       userdata?.setUser({
         ...userdata.user, email: user.data.email, username: user.data.username, fname: user.data.fname, description: user.data
           .description
       })
       signaturepublickey.current = user.data.signaturepublickey
-      const users = await axios.post(`http://localhost:8080/api/getmessages`, { username: username })
+      const users = await axios.post(`${import.meta.env.VITE_SERVER_URL}/api/getmessages`, { username: username })
       const setdata = async () => {
         for (const user of users.data) {
           const room = [username, user.username].sort().join('_')
@@ -296,7 +296,7 @@ function App() {
       toast.error('Description should be between 10 and 100 characters long')
       return
     }
-    const res = await axios.post(`http://localhost:8080/api/updateprofile`, { email: userdata?.user.email, fname: profiledata.fname, description: profiledata.description, gender: profiledata.gender }, { headers: { 'Content-Type': 'application/json' } })
+    const res = await axios.post(`${import.meta.env.VITE_SERVER_URL}/api/updateprofile`, { email: userdata?.user.email, fname: profiledata.fname, description: profiledata.description, gender: profiledata.gender }, { headers: { 'Content-Type': 'application/json' } })
     setProfilevisibility(false)
     userdata?.setUser({ ...userdata.user, fname: profiledata.fname, description: profiledata.description, gender: profiledata.gender })
     toast.success(res.data.message)

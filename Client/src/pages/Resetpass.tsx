@@ -75,7 +75,7 @@ const Resetpass = () => {
             return;
         }
         else {
-            const res = await axios.post('http://localhost:8080/api/getpass', { usermail: email },
+            const res = await axios.post(`${import.meta.env.VITE_SERVER_URL}/api/getpass`, { usermail: email },
                 {
                     headers: {
                         'Content-Type': 'application/json',
@@ -107,7 +107,7 @@ const Resetpass = () => {
                 }
 
                 const hashedPassword = await hashPassword(password)
-                await axios.put('http://localhost:8080/api/updatepass', { usermail: email, password: hashedPassword },
+                await axios.put(`${import.meta.env.VITE_SERVER_URL}/api/updatepass`, { usermail: email, password: hashedPassword },
                     {
                         headers: {
                             'Content-Type': 'application/json',

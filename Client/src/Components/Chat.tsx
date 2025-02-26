@@ -60,7 +60,7 @@ const Chat = () => {
 
     const socket = useMemo(() => {
         try {
-            return io(`http://localhost:8080`);
+            return io(`${import.meta.env.VITE_SERVER_URL}`);
         } catch (e) {
             console.log('error connection');
             return null;
@@ -94,10 +94,10 @@ const Chat = () => {
         }
 
         const getdata = async () => {
-            await axios.post("http://localhost:8080/api/setstatus", { receiver: username, status: 'delivered' })
+            await axios.post(`${import.meta.env.VITE_SERVER_URL}/api/setstatus`, { receiver: username, status: 'delivered' })
             socket?.emit("user_status", username, true)
-            await axios.post("http://localhost:8080/api/isonline", { username: username, isonline: true });
-            let user = await axios.post(`http://localhost:8080/api/userdata`, { username: username }, { headers: { 'Content-Type': 'application/json' } })
+            await axios.post(`${import.meta.env.VITE_SERVER_URL}/api/isonline`, { username: username, isonline: true });
+            let user = await axios.post(`${import.meta.env.VITE_SERVER_URL}/api/userdata`, { username: username }, { headers: { 'Content-Type': 'application/json' } })
             receiverdata.current = user.data
         }
         getdata()
@@ -115,7 +115,7 @@ const Chat = () => {
 
         const handleTabClose = async (username: string) => {
             socket?.emit("user_status", username, false)
-            await axios.post("http://localhost:8080/api/isonline", { username: username, isonline: false });
+            await axios.post(`${import.meta.env.VITE_SERVER_URL}/api/isonline`, { username: username, isonline: false });
         };
 
         window.addEventListener("beforeunload", () => handleTabClose(username!));
@@ -133,7 +133,7 @@ const Chat = () => {
                 console.log('no receiver', receiver);
                 return setIsuser(false)
             };
-            const chechuser = await axios.post("http://localhost:8080/api/auth", { usermail: receiver })
+            const chechuser = await axios.post(`${import.meta.env.VITE_SERVER_URL}/api/auth`, { usermail: receiver })
             if (!chechuser.data.result) {
                 console.log(chechuser.data);
                 Navigate("/404page")
@@ -151,10 +151,10 @@ const Chat = () => {
             );
             const room = [username, receiver].sort().join('_')
             socket?.emit("seen_message", room, username)
-            const res = await axios.post("http://localhost:8080/api/userdata", { username: receiver })
+            const res = await axios.post(`${import.meta.env.VITE_SERVER_URL}/api/userdata`, { username: receiver })
             senderdata.current = res.data
             setreceiverdetails(res.data)
-            const messages = await axios.post("http://localhost:8080/api/getmessages", { room: roomname })
+            const messages = await axios.post(`${import.meta.env.VITE_SERVER_URL}/api/getmessages`, { room: roomname })
             messages.data.forEach(async (message: MessageProps) => {
                 await processMessage(message);
             })
@@ -179,7 +179,7 @@ const Chat = () => {
                     setmessages(prevMessages =>
                         prevMessages.map(msg => ({ ...msg, status: 'seen' }))
                     );
-                    await axios.post("http://localhost:8080/api/setstatus", { room: room, status: 'seen' })
+                    await axios.post(`${import.meta.env.VITE_SERVER_URL}/api/setstatus`, { room: room, status: 'seen' })
                 }
             })
 
@@ -190,7 +190,7 @@ const Chat = () => {
                     setmessages(prevMessages =>
                         prevMessages.map(msg => ({ ...msg, status: 'seen' }))
                     );
-                    await axios.post("http://localhost:8080/api/setstatus", { room: room, status: 'seen' })
+                    await axios.post(`${import.meta.env.VITE_SERVER_URL}/api/setstatus`, { room: room, status: 'seen' })
                 }
             })
 
@@ -304,7 +304,7 @@ const Chat = () => {
         socket?.emit("send_message", { message: { message: { encryptedmessage: encryptedmessage.encryptedData, iv: encryptedmessage.iv }, sender: username, receiver: receiver, status: 'sent', cryptopublickey: receiverdata.current.cryptopublickey, signaturepublickey: receiverdata.current.signaturepublickey }, room: room })
         setmessages([...messages, { message: { encryptedmessage: message, iv: encryptedmessage.iv }, sender: username, receiver: receiver, status: receiverdetails?.isonline ? 'delivered' : 'sent' }])
         setmessage('')
-        await axios.post("http://localhost:8080/api/savemessage", { message: { encryptedmessage: encryptedmessage.encryptedData, iv: encryptedmessage.iv }, sender: username, receiver: receiver, status: receiverdetails?.isonline ? 'delivered' : 'sent', room: room })
+        await axios.post(`${import.meta.env.VITE_SERVER_URL}/api/savemessage`, { message: { encryptedmessage: encryptedmessage.encryptedData, iv: encryptedmessage.iv }, sender: username, receiver: receiver, status: receiverdetails?.isonline ? 'delivered' : 'sent', room: room })
     }
 
     return (

@@ -58,7 +58,7 @@ const server = createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: `${process.env.CLIENT_URL}`,
     methods: ["GET", "POST"]
   }
 })
@@ -91,7 +91,7 @@ io.on("connection", (socket) => {
 })
 
 server.listen(8080, () => {
-  console.log('Server is running on port http://localhost:8080');
+  console.log('Server is running on port 8080');
 }).on('error', (err) => {
   console.error('Server error:', err);
 });

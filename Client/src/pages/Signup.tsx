@@ -73,7 +73,7 @@ const Signup = () => {
 
     if (!executeRecaptcha) { return }
     const token = await executeRecaptcha("submit");
-    const res = await axios.post('http://localhost:8080/api/verifyrecaptcha', { token: token }, {
+    const res = await axios.post(`${ import.meta.env.VITE_SERVER_URL }/api/verifyrecaptcha`, { token: token }, {
       headers: {
         'Content-Type': 'application/json'
       }
@@ -138,7 +138,7 @@ const Signup = () => {
     else {
       setLoad(true)
 
-      const res = await axios.post('http://localhost:8080/api/usermail', {
+      const res = await axios.post(`${ import.meta.env.VITE_SERVER_URL }/api/usermail`, {
         email: formData.email,
         username: formData.username,
       }, {
