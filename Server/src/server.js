@@ -7,7 +7,7 @@ import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import Createuser from "./routes/Createuser.js";
 import Usermail from "./routes/Usermail.js";
-import auth from "./routes/auth.js";
+import auth from "./routes/Auth.js";
 import Getpass from "./routes/Getpass.js"
 import Getemail from "./routes/Getemail.js"
 import Updatepass from "./routes/Updatepass.js"
