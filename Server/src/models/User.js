@@ -44,7 +44,7 @@ const userSchema = new Schema({
     },
     description: {
         type: String,
-        default: ''
+        default: 'I love to chat this way'
     },
     passwordversion: {
         type: Number,

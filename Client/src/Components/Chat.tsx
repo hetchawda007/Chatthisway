@@ -1,21 +1,15 @@
 import { useParams, useNavigate } from "react-router"
-import { useRef, useState, useEffect, useMemo } from "react"
+import { useRef, useState, useEffect, useContext, useMemo } from "react"
 import axios from "axios";
 import Message from "./Message";
 import { io } from "socket.io-client"
 import nacl from "tweetnacl";
 import naclUtil from "tweetnacl-util";
+import Chatusers from "../Context/Chatusers";
 
 interface encryptedMessageProps {
     encryptedmessage: string,
     iv: string,
-}
-
-interface MessageProps {
-    message: encryptedMessageProps,
-    sender: string,
-    receiver: string,
-    status: string
 }
 
 interface MessageProps {
@@ -57,6 +51,7 @@ const Chat = () => {
     const senderdata = useRef<user>({ email: '', username: '', password: '', repeatPassword: '', fname: '', description: '', signatureprivatekey: '', signaturepublickey: '', cryptoprivatekey: '', cryptopublickey: '', gender: '', isonline: false })
     const [receiverdetails, setreceiverdetails] = useState<user>({ email: '', username: '', password: '', repeatPassword: '', fname: '', description: '', signatureprivatekey: '', signaturepublickey: '', cryptoprivatekey: '', cryptopublickey: '', gender: '', isonline: false })
     const [message, setmessage] = useState<string>('')
+    const chatuser = useContext(Chatusers)
     const [profilevisibility, setprofilevisibility] = useState<boolean>(false)
     const [isuser, setIsuser] = useState(false)
     const textareaRef = useRef<HTMLInputElement>(null);
@@ -110,31 +105,9 @@ const Chat = () => {
         socket?.on("connect", () => {
             console.log("connected", socket?.id);
         })
-        socket?.on("receive_message", async (message: newMessageProps) => {
-            const sharedKey = deriveSharedSecret(keypair.current.cryptokey, senderdata.current.cryptopublickey);
-            const decryptedmessage = await decryptMessage(message.message.encryptedmessage, message.message.iv, sharedKey);
-            const verifiedMessage = verifyMessage(decryptedmessage, senderdata.current.signaturepublickey);
-            if (!verifiedMessage) return console.log('unverified');
-            setmessages(prevMessages => [...prevMessages, { message: { encryptedmessage: verifiedMessage, iv: message.message.iv }, sender: message.sender, receiver: message.receiver, status: message.status }])
-            const room = [username, receiver].sort().join('_')
-            socket?.emit("seen_message", room, username)
-        })
-
-        socket?.on("message_status", async (room: string, username: string) => {
-            console.log(senderdata.current.username, username);
-            if (senderdata.current.username === username) {
-                setmessages(prevMessages =>
-                    prevMessages.map(msg => ({ ...msg, status: 'seen' }))
-                );
-                await axios.post("http://localhost:8080/api/setstatus", { room: room, status: 'seen' })
-            }
-        })
 
         socket?.on("user_status", (username: string, status: boolean) => {
-            console.log(username, status);
-            console.log(senderdata.current.username, username);
             if (senderdata.current.username === username) {
-                console.log(username, status);
                 setreceiverdetails(prev => ({ ...prev, isonline: status }))
                 setmessages(prevMessages => prevMessages.map(msg => ({ ...msg, status: msg.status === 'sent' ? 'delivered' : msg.status })))
             }
@@ -155,12 +128,11 @@ const Chat = () => {
     }, [])
 
     useEffect(() => {
-        // console.log(messages);
-    }, [messages])
-
-    useEffect(() => {
         const checkuser = async () => {
-            if (!receiver) return setIsuser(false);
+            if (!receiver) {
+                console.log('no receiver', receiver);
+                return setIsuser(false)
+            };
             const chechuser = await axios.post("http://localhost:8080/api/auth", { usermail: receiver })
             if (!chechuser.data.result) {
                 console.log(chechuser.data);
@@ -172,18 +144,56 @@ const Chat = () => {
             }
             setmessages([])
             const roomname = [username, receiver].sort().join('_')
+            chatuser?.setchatusers((prevUsers: any) =>
+                prevUsers.map((user: any) =>
+                    user.username === receiver ? { ...user, messagecount: 0 } : user
+                )
+            );
+            const room = [username, receiver].sort().join('_')
+            socket?.emit("seen_message", room, username)
             const res = await axios.post("http://localhost:8080/api/userdata", { username: receiver })
             senderdata.current = res.data
             setreceiverdetails(res.data)
             const messages = await axios.post("http://localhost:8080/api/getmessages", { room: roomname })
-            console.log("messages :", messages.data);
             messages.data.forEach(async (message: MessageProps) => {
                 await processMessage(message);
             })
-            if (messages.data[0].receiver === username) {
-                await axios.post("http://localhost:8080/api/setstatus", { room: roomname, status: 'seen' })
-            }
+
             socket?.emit("join_room", roomname, username)
+
+            socket?.on("receive_message", async (message: newMessageProps) => {
+                console.log(message.receiver, username);
+                if (message.receiver !== username) return
+                const sharedKey = deriveSharedSecret(keypair.current.cryptokey, senderdata.current.cryptopublickey);
+                const decryptedmessage = await decryptMessage(message.message.encryptedmessage, message.message.iv, sharedKey);
+                const verifiedMessage = verifyMessage(decryptedmessage, senderdata.current.signaturepublickey);
+                if (!verifiedMessage) return console.log('unverified');
+                setmessages(prevMessages => [...prevMessages, { message: { encryptedmessage: verifiedMessage, iv: message.message.iv }, sender: message.sender, receiver: message.receiver, status: message.status }])
+                console.log(username);
+                socket.emit("isinchat", room, username)
+            })
+
+            socket?.on("isin_chat", async (room: string, username: string) => {
+                if (receiver === username) {
+                    console.log(receiver, username);
+                    setmessages(prevMessages =>
+                        prevMessages.map(msg => ({ ...msg, status: 'seen' }))
+                    );
+                    await axios.post("http://localhost:8080/api/setstatus", { room: room, status: 'seen' })
+                }
+            })
+
+            socket?.on("message_status", async (room: string, username: string) => {
+                console.log(receiver, username);
+                if (receiver === username) {
+                    console.log(receiver, username);
+                    setmessages(prevMessages =>
+                        prevMessages.map(msg => ({ ...msg, status: 'seen' }))
+                    );
+                    await axios.post("http://localhost:8080/api/setstatus", { room: room, status: 'seen' })
+                }
+            })
+
         }
         if (textareaRef.current) {
             textareaRef.current.focus();
@@ -291,10 +301,9 @@ const Chat = () => {
         const signedMessage = signMessage(message, keypair.current.signaturekey);
         const encryptedmessage = await encryptMessage(signedMessage, sharedKey)
         const room = [username, receiver].sort().join('_')
-        socket?.emit("send_message", { message: { message: { encryptedmessage: encryptedmessage.encryptedData, iv: encryptedmessage.iv }, sender: username, receiver: receiver, status: 'sent' }, room: room })
+        socket?.emit("send_message", { message: { message: { encryptedmessage: encryptedmessage.encryptedData, iv: encryptedmessage.iv }, sender: username, receiver: receiver, status: 'sent', cryptopublickey: receiverdata.current.cryptopublickey, signaturepublickey: receiverdata.current.signaturepublickey }, room: room })
         setmessages([...messages, { message: { encryptedmessage: message, iv: encryptedmessage.iv }, sender: username, receiver: receiver, status: receiverdetails?.isonline ? 'delivered' : 'sent' }])
         setmessage('')
-
         const res = await axios.post("http://localhost:8080/api/savemessage", { message: { encryptedmessage: encryptedmessage.encryptedData, iv: encryptedmessage.iv }, sender: username, receiver: receiver, status: receiverdetails?.isonline ? 'delivered' : 'sent', room: room })
     }
 

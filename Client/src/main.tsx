@@ -15,6 +15,7 @@ import Signupwithrecaptcha from './Components/Signupwithrecaptcha.tsx';
 import Pagenotfound from './Components/Pagenotfound.tsx';
 import Userscontext from './Context/Userscontext.ts';
 import Userdata from './Context/Userdata.ts';
+import Chatusers from './Context/Chatusers.ts';
 
 const Main = () => {
   interface credentials {
@@ -29,6 +30,21 @@ const Main = () => {
     fname: string
   }
 
+
+  interface messageprops {
+    encryptedmessage: string,
+    iv: string
+  }
+
+  interface chatuser {
+    username: string,
+    lastmessage: messageprops,
+    date: string,
+    signaturepublickey: string,
+    cryptopublickey: string,
+    messagecount: number
+  }
+
   const [Credentials, setCredentials] = useState<credentials>({ email: '', username: '', password: '', repeatPassword: '', fname: '' });
   const [Usermail, setUsermail] = useState('');
   const [code, setCode] = useState('564751');
@@ -36,6 +52,7 @@ const Main = () => {
   const [userdata, setUserdata] = useState({
     email: '', username: '', password: '', repeatPassword: '', fname: '', description: '', signatureprivatekey: '', signaturepublickey: '', cryptoprivatekey: '', cryptopublickey: '', gender: ''
   });
+  const [chatusers, setchatusers] = useState<chatuser[]>([]);
 
   return (
     <SignupContext.Provider value={{ credentials: Credentials, setCredentials }}>
@@ -43,18 +60,20 @@ const Main = () => {
         <Userscontext.Provider value={{ users: users, setUsers }}>
           <Code.Provider value={{ code: code, setCode }}>
             <Userdata.Provider value={{ user: userdata, setUser: setUserdata }}>
-              <BrowserRouter>
-                <Routes>
-                  <Route path="/" element={<Home />} />
-                  <Route path="/login" element={<Loginwithrecaptcha />} />
-                  <Route path="/signup" element={<Signupwithrecaptcha />} />
-                  <Route path="/verifyotp/:codenumber" element={<Verifyotp />} />
-                  <Route path="/terms&conditions" element={<Terms />} />
-                  <Route path="/dashboard/:username/:receiver?" element={<App />} />
-                  <Route path="/Resetpass/:usermail" element={<Resetpass />} />
-                  <Route path="*" element={<Pagenotfound />} />
-                </Routes>
-              </BrowserRouter>
+              <Chatusers.Provider value={{ chatusers: chatusers, setchatusers: setchatusers }}>
+                <BrowserRouter>
+                  <Routes>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/login" element={<Loginwithrecaptcha />} />
+                    <Route path="/signup" element={<Signupwithrecaptcha />} />
+                    <Route path="/verifyotp/:codenumber" element={<Verifyotp />} />
+                    <Route path="/terms&conditions" element={<Terms />} />
+                    <Route path="/dashboard/:username/:receiver?" element={<App />} />
+                    <Route path="/Resetpass/:usermail" element={<Resetpass />} />
+                    <Route path="*" element={<Pagenotfound />} />
+                  </Routes>
+                </BrowserRouter>
+              </Chatusers.Provider>
             </Userdata.Provider>
           </Code.Provider>
         </Userscontext.Provider>

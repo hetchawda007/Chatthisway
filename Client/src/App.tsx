@@ -1,5 +1,5 @@
 import './App.css'
-import { useEffect, useState, useContext, useMemo } from 'react'
+import { useEffect, useState, useContext, useMemo, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router'
 import { checkcookie, deletecookie } from './Api/useAuth'
 import { motion } from 'framer-motion'
@@ -10,23 +10,80 @@ import { ToastContainer, toast } from 'react-toastify'
 import Chat from './Components/Chat'
 import SignupContext from './Context/Signupcontext'
 import { io } from "socket.io-client"
+import nacl from "tweetnacl";
+import naclUtil from "tweetnacl-util";
+import Chatusers from './Context/Chatusers'
+
+interface encryptedMessageProps {
+  encryptedmessage: string,
+  iv: string,
+}
+
+interface MessageProps {
+  message: encryptedMessageProps,
+  sender: string,
+  receiver: string,
+  status: string
+}
+
+interface user {
+  username: string,
+  fname: string
+}
+
+interface ChatUser {
+  username: string;
+}
+
+
+interface messageprops {
+  encryptedmessage: string,
+  iv: string
+}
+
+interface chatusersprops {
+  username: string,
+  lastmessage: messageprops,
+  date: string,
+  cryptopublickey: string,
+  signaturepublickey: string,
+  messagecount: number
+}
+
+
+interface newMessageProps {
+  message: encryptedMessageProps,
+  sender: string,
+  receiver: string,
+  status: string,
+  signaturepublickey: string,
+  cryptopublickey: string
+}
+
+interface encryptedMessageProps {
+  encryptedmessage: string,
+  iv: string,
+}
 
 function App() {
 
-  interface user {
-    username: string,
-    fname: string
-  }
-
-  interface ChatUser {
-    username: string;
-  }
 
   const Users = useContext(Userscontext)
   const [profiledata, setProfiledata] = useState({ fname: '', description: '', gender: '' })
+  const keypair = useRef({ cryptokey: '', signinkey: '' })
+  const signaturepublickey = useRef('')
   const userdata = useContext(Userdata)
   const { username } = useParams()
+  const { receiver } = useParams()
   const Signupcontext = useContext(SignupContext)
+  const Navigate = useNavigate()
+  const [chatuserdata, setChatuserdata] = useState<chatusersprops[]>([])
+  const chatuser = useContext(Chatusers)
+  const [users, setUsers] = useState<user[]>([])
+  const [dropdown, setDropdown] = useState(false)
+  const [searchtext, setSearchtext] = useState('')
+  const [search, setSearch] = useState(false)
+  const [profilevisibility, setProfilevisibility] = useState(false)
 
   const socket = useMemo(() => {
     try {
@@ -37,24 +94,72 @@ function App() {
     }
   }, []);
 
-  const Navigate = useNavigate()
-  const chatusers = [
-    { username: 'alicej', lastmessage: 'Hey, how are you doing?', date: '01/10/2023', messagecount: 2 },
-    { username: 'bobsmith', lastmessage: 'Can we reschedule our meeting?', date: '30/09/2023', messagecount: 0 },
-    { username: 'charlieb', lastmessage: 'I have sent the documents.', date: '29/09/2023', messagecount: 1 },
-    { username: 'dianap', lastmessage: 'Let’s catch up tomorrow.', date: '28/09/2023', messagecount: 5 },
-    { username: 'evea', lastmessage: 'Thank you for your help!', date: '27/09/2023', messagecount: 0 },
-    { username: 'frankc', lastmessage: 'I will get back to you soon.', date: '26/09/2023', messagecount: 3 },
-    { username: 'graceh', lastmessage: 'Can you review this code?', date: '25/09/2023', messagecount: 0 },
-    { username: 'hankp', lastmessage: 'Meeting is confirmed for 3 PM.', date: '24/09/2023', messagecount: 1 },
-    { username: 'ivyl', lastmessage: 'Looking forward to our collaboration.', date: '23/09/2023', messagecount: 0 }
-  ]
-  
-  const [users, setUsers] = useState<user[]>([])
-  const [dropdown, setDropdown] = useState(false)
-  const [searchtext, setSearchtext] = useState('')
-  const [search, setSearch] = useState(false)
-  const [profilevisibility, setProfilevisibility] = useState(false)
+  const deriveSharedSecret = (privateKey: any, recipientPublicKey: string) => {
+    const privKeyUint8 = naclUtil.decodeBase64(privateKey);
+    const pubKeyUint8 = naclUtil.decodeBase64(recipientPublicKey);
+    return nacl.box.before(pubKeyUint8, privKeyUint8)
+  };
+
+  async function decryptMessage(encryptedData: string, iv: string, sharedKey: Uint8Array) {
+    const key = await window.crypto.subtle.importKey(
+      "raw",
+      sharedKey,
+      { name: "AES-GCM" },
+      false,
+      ["decrypt"]
+    );
+
+    const decrypted = await window.crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: naclUtil.decodeBase64(iv) },
+      key,
+      naclUtil.decodeBase64(encryptedData)
+    );
+
+    return new TextDecoder().decode(decrypted);
+  }
+
+  const verifyMessage = (signedMessage: string, publicKey: string) => {
+    const signedMessageUint8 = naclUtil.decodeBase64(signedMessage);
+    const publicKeyUint8 = naclUtil.decodeBase64(publicKey);
+    const verifiedMessage = nacl.sign.open(signedMessageUint8, publicKeyUint8);
+    return verifiedMessage ? naclUtil.encodeUTF8(verifiedMessage) : null;
+  };
+
+  const processMessage = async (message: chatusersprops) => {
+
+    const sharedKey = deriveSharedSecret(keypair.current.cryptokey, message.cryptopublickey);
+    const decryptedmessage = await decryptMessage(message.lastmessage.encryptedmessage, message.lastmessage.iv, sharedKey);
+    const verifiedMessage = verifyMessage(decryptedmessage, message.signaturepublickey);
+    if (!verifiedMessage) {
+      if (!signaturepublickey.current) return console.log('No signature public key');
+      const secondverifiedmessage = verifyMessage(decryptedmessage, signaturepublickey.current);
+      if (!secondverifiedmessage) return console.log('Message not verified');
+      chatuser?.setchatusers((prevMessages) => [
+        ...prevMessages,
+        {
+          username: message.username,
+          lastmessage: { encryptedmessage: secondverifiedmessage, iv: message.lastmessage.iv },
+          date: message.date,
+          signaturepublickey: message.signaturepublickey,
+          cryptopublickey: message.cryptopublickey,
+          messagecount: message.messagecount
+        }
+      ]);
+      return
+    }
+    chatuser?.setchatusers((prevMessages) => [
+      ...prevMessages,
+      {
+        username: message.username,
+        lastmessage: { encryptedmessage: verifiedMessage, iv: message.lastmessage.iv },
+        date: message.date,
+        signaturepublickey: message.signaturepublickey,
+        cryptopublickey: message.cryptopublickey,
+        messagecount: message.messagecount
+      }
+    ]);
+  }
+
   useEffect(() => {
     const check = async () => {
       const res = await checkcookie()
@@ -81,26 +186,16 @@ function App() {
         return
       }
       else {
-        const response = await axios.get(`http://localhost:8080/api/getusers`)
-        const resp = response.data.filter((user: user) => user.username !== res.username)
-        Users?.setUsers(resp)
-        setUsers(response.data)
-
-        let user = await axios.post(`http://localhost:8080/api/userdata`, { username: res.username }, { headers: { 'Content-Type': 'application/json' } })
-        setProfiledata({ fname: user.data.fname, description: user.data.description, gender: user.data.gender })
-
         try {
           const dbRequest = indexedDB.open("Credentials", 1);
           dbRequest.onsuccess = function () {
             const db = dbRequest.result;
             const tx = db.transaction("users", "readonly");
             const store = tx.objectStore("users");
-
             const getRequest = store.get(1);
             getRequest.onsuccess = async function () {
-              user.data.signatureprivatekey = await getRequest.result.signinkey;
-              user.data.cryptoprivatekey = await getRequest.result.cryptokey;
-              userdata?.setUser(user.data)
+              keypair.current.cryptokey = await getRequest.result.cryptokey;
+              keypair.current.signinkey = await getRequest.result.signinkey;
             };
           };
 
@@ -110,12 +205,65 @@ function App() {
         } catch (error) {
           console.error("Error accessing IndexedDB:", error);
         }
+        const response = await axios.get(`http://localhost:8080/api/getusers`)
+        const resp = response.data.filter((user: user) => user.username !== res.username)
+        Users?.setUsers(resp)
+        setUsers(response.data)
+        let user = await axios.post(`http://localhost:8080/api/userdata`, { username: res.username }, { headers: { 'Content-Type': 'application/json' } })
+        setProfiledata({ fname: user.data.fname, description: user.data.description, gender: user.data.gender })
         await Navigate(`/dashboard/${res.username}`)
       }
 
     }
     check()
+
   }, [])
+
+  useEffect(() => {
+    if (!receiver) return
+    socket?.on("receive_message", async (message: newMessageProps) => {
+      if (message.sender !== receiver) return
+      const sharedKey = deriveSharedSecret(keypair.current.cryptokey, message.cryptopublickey);
+      const decryptedmessage = await decryptMessage(message.message.encryptedmessage, message.message.iv, sharedKey);
+      const verifiedMessage = verifyMessage(decryptedmessage, message.signaturepublickey);
+      if (!verifiedMessage) return console.log('unverified');
+      if (message.sender === receiver) {
+        chatuser?.setchatusers((prevMessages) =>
+          prevMessages.map((chatUser) =>
+            chatUser.username === message.sender
+              ? {
+                ...chatUser,
+                lastmessage: { encryptedmessage: verifiedMessage, iv: message.message.iv },
+                messagecount: chatUser.messagecount + 1,
+              }
+              : chatUser
+          )
+        );
+      }
+    });
+  }, [receiver])
+
+  useEffect(() => {
+    const func = async () => {
+      let user = await axios.post(`http://localhost:8080/api/userdata`, { username: username }, { headers: { 'Content-Type': 'application/json' } })
+      userdata?.setUser({
+        ...userdata.user, email: user.data.email, username: user.data.username, fname: user.data.fname, description: user.data
+          .description
+      })
+      signaturepublickey.current = user.data.signaturepublickey
+      const users = await axios.post(`http://localhost:8080/api/getmessages`, { username: username })
+      const setdata = async () => {
+        for (const user of users.data) {
+          const room = [username, user.username].sort().join('_')
+          socket?.emit("join_room", room, username)
+          processMessage(user)
+        }
+      }
+      await setdata()
+      chatuser?.setchatusers(chatuserdata)
+    }
+    func()
+  }, [username])
 
   const handlechange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>): void => {
     const { name, value } = e.target;
@@ -305,7 +453,7 @@ function App() {
             </div>
           </motion.div>}
 
-          {(!search && !profilevisibility) && chatusers.map((name) => {
+          {(!search && !profilevisibility) && chatuser?.chatusers.map((name) => {
             return (
               <motion.div key={name.username} onClick={() => handlechat(name)} className='flex items-center hover:bg-[#383838] rounded-xl mx-3 cursor-pointer justify-between p-3'
                 initial={{ scale: 0.8, opacity: 0 }}
@@ -324,7 +472,7 @@ function App() {
                   </div>
                   <div className='flex flex-col max-w-52 justify-center'>
                     <div className='text-white leading-none font-semibold text-lg'>{name.username}</div>
-                    <div className='w-full text-neutral-400 truncate font-thin text-sm'>{name.lastmessage}</div>
+                    <div className='w-full text-neutral-400 truncate font-thin text-sm'>{name.lastmessage.encryptedmessage}</div>
                   </div>
                 </div>
                 <div className='flex flex-col items-end justify-around'>

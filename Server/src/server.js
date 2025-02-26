@@ -68,7 +68,6 @@ io.on("connection", (socket) => {
   socket.on("join_room", (room, username) => {
     socket.join(room);
     console.log(username + " joined room: " + room);
-    socket.to(room).emit("message_status", room, username);
   })
   socket.on("send_message", async ({ message, room }) => {
     console.log(message);
@@ -77,6 +76,10 @@ io.on("connection", (socket) => {
   socket.on("seen_message", (room, username) => {
     console.log(username + " seen the message in room: " + room);
     socket.to(room).emit("message_status", room, username);
+  })
+  socket.on("isinchat", (room, username) => {
+    console.log(username + " is in chat room: " + room);
+    socket.to(room).emit("isin_chat", room, username);
   })
   socket.on("disconnect", () => {
     console.log("User disconnected", socket.id);
