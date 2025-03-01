@@ -158,25 +158,25 @@ function App() {
       const res = await checkcookie()
       if (res.message !== 'Protected content') {
         console.log('Cookie not valid', res);
-        // try {
-        //   const dbRequest = indexedDB.open("Credentials", 1);
+        try {
+          const dbRequest = indexedDB.open("Credentials", 1);
 
-        //   dbRequest.onupgradeneeded = function () {
-        //     const db = dbRequest.result;
-        //     db.createObjectStore("users", { keyPath: "id" });
-        //   };
+          dbRequest.onupgradeneeded = function () {
+            const db = dbRequest.result;
+            db.createObjectStore("users", { keyPath: "id" });
+          };
 
-        //   dbRequest.onsuccess = function () {
-        //     const db = dbRequest.result;
-        //     const tx = db.transaction("users", "readwrite");
-        //     const store = tx.objectStore("users");
-        //     store.put({ id: 1, cryptokey: '', signinkey: '' });
-        //   };
-        // }
-        // catch (error) {
-        //   console.error("Error storing data in IndexedDB:", (error as Error).message);
-        // }
-        // Navigate('/login')
+          dbRequest.onsuccess = function () {
+            const db = dbRequest.result;
+            const tx = db.transaction("users", "readwrite");
+            const store = tx.objectStore("users");
+            store.put({ id: 1, cryptokey: '', signinkey: '' });
+          };
+        }
+        catch (error) {
+          console.error("Error storing data in IndexedDB:", (error as Error).message);
+        }
+        Navigate('/login')
         return
       }
       else {
