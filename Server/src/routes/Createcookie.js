@@ -14,10 +14,10 @@ router.post('/createcookie', async (req, res) => {
         );
         res.clearCookie("token");
         res.cookie("token", token, {
-            httpOnly: true, // Prevents JavaScript access
-            secure: process.env.NODE_ENV === "production", // Only HTTPS in production
-            sameSite: "strict", // Prevents CSRF attacks
-            maxAge: 60 * 60 * 24 * 7 * 1000 // 7 days
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production", 
+            sameSite: "strict",
+            maxAge: 60 * 60 * 24 * 7 * 1000
         });
         console.log(token);
         res.json({ message: "Login successful" });
