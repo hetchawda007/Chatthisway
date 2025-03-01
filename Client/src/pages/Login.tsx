@@ -1,11 +1,8 @@
-import { useState, useContext, useEffect, useRef, useMemo } from "react"
+import { useState, useEffect, useRef } from "react"
 import Commonheader from "../Components/Commonheader"
 import { Link } from "react-router"
 import { useNavigate } from "react-router"
 import { ToastContainer, toast } from "react-toastify"
-import LoginContext from "../Context/Logincontext"
-import SignupContext from "../Context/Signupcontext"
-import Code from "../Context/Logincode"
 import axios from "axios"
 import bcrypt from "bcryptjs"
 import naclUtil from "tweetnacl-util";
@@ -24,12 +21,6 @@ const Login = () => {
   const [visible, setVisible] = useState({ visible1: false, visible2: false })
   const [load, setLoad] = useState(false)
   const Navigate = useNavigate()
-  const logincontext = useContext(LoginContext)
-  const signupcontext = useContext(SignupContext)
-  const code = useContext(Code)
-  const sendotp = useMemo(() => {
-    return Math.floor(100000 + Math.random() * 900000).toString();
-  }, [])
 
   const ref = useRef<HTMLInputElement>(null)
 
@@ -64,89 +55,6 @@ const Login = () => {
 
   const handlechange = () => {
     setVisible({ ...visible, visible1: !visible.visible1 });
-  }
-
-  const handleclick = async () => {
-
-    if (!executeRecaptcha) { return }
-    const token = await executeRecaptcha("submit");
-
-    const res = await axios.post(`${ import.meta.env.VITE_SERVER_URL }/api/verifyrecaptcha`, { token: token }, {
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    })
-
-    if (res.data.success === false) {
-      window.location.href = 'https://www.google.com';
-      return
-    }
-
-    if (usermail.length === 0) {
-      toast.error('Fill your username or email please', {
-        position: "bottom-center",
-        autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: false,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "dark",
-      });
-      setUsermail('')
-    }
-    else if (usermail.length <= 5) {
-      toast.error('Enter correct username or password', {
-        position: "bottom-center",
-        autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: false,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "dark",
-      });
-      setUsermail('')
-    }
-    else {
-      setLoad(true)
-      const response = await axios.post(`${ import.meta.env.VITE_SERVER_URL }/api/getemail`, {
-        usermail: usermail,
-      }, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        validateStatus: () => true
-      })
-
-      logincontext?.setUsermail(response.data.usermail)
-      const res = await axios.post(`${ import.meta.env.VITE_SERVER_URL }/api/auth`, {
-        usermail: usermail,
-      }, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        validateStatus: () => true
-      })
-      if (res.data.result === true) {
-        signupcontext?.setCredentials({ email: '', username: '', password: '', repeatPassword: '', fname: '' })
-        code?.setCode(sendotp)
-        Navigate(`/verifyotp/${sendotp}`)
-      } else {
-        toast.error('User not found', {
-          position: "bottom-center",
-          autoClose: 3000,
-          hideProgressBar: false,
-          closeOnClick: false,
-          pauseOnHover: true,
-          draggable: true,
-          progress: undefined,
-          theme: "dark",
-        });
-        setLoad(false)
-        setUsermail('')
-      }
-    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -308,9 +216,6 @@ const Login = () => {
             </div>
           </div>
 
-          <div className="flex items-start mb-5">
-            <button type="button" onClick={handleclick} className="text-blue-700 font-semibold text-base">Forgot Password ?</button>
-          </div>
           {!load && <button type="submit" className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">Login your account</button>}
           {load && <button disabled type="button" className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800 inline-flex items-center">
             <svg aria-hidden="true" role="status" className="inline w-4 h-4 me-3 text-white animate-spin" viewBox="0 0 100 101" fill="none" xmlns="http://www.w3.org/2000/svg">

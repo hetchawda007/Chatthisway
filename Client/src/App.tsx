@@ -118,6 +118,10 @@ function App() {
   const processMessage = async (message: chatusersprops) => {
 
     const sharedKey = deriveSharedSecret(keypair.current.cryptokey, message.cryptopublickey);
+    if (!sharedKey) {
+      console.error('Failed to derive shared key');
+      return;
+    }
     const decryptedmessage = await decryptMessage(message.lastmessage.encryptedmessage, message.lastmessage.iv, sharedKey);
     const verifiedMessage = verifyMessage(decryptedmessage, message.signaturepublickey);
     if (!verifiedMessage) {

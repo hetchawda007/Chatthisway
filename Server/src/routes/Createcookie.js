@@ -5,11 +5,12 @@ import User from '../models/User.js';
 const router = express.Router();
 
 router.post('/createcookie', async (req, res) => {
+    console.log("Createcookie.js /createcookie req.body: ", req.body);
     try {
         const user = await User.findOne({ $or: [{ username: req.body.usermail }, { email: req.body.usermail }] })
 
         const token = jwt.sign(
-            { email: user.email, passwordversion: user.passwordversion }, process.env.JWT_SECRET || "fallbackSecret", { expiresIn: "7d" }
+            { email: user.email }, process.env.JWT_SECRET || "fallbackSecret", { expiresIn: "7d" }
         );
         res.clearCookie("token");
         res.cookie("token", token, {

@@ -9,7 +9,6 @@ import Verifyotp from './pages/Verifyotp.tsx';
 import SignupContext from './Context/Signupcontext.ts';
 import LoginContext from './Context/Logincontext.ts';
 import Code from './Context/Logincode.ts';
-import Resetpass from './pages/Resetpass.tsx';
 import Loginwithrecaptcha from './Components/Loginwithrecaptcha.tsx';
 import Signupwithrecaptcha from './Components/Signupwithrecaptcha.tsx';
 import Pagenotfound from './Components/Pagenotfound.tsx';
@@ -69,7 +68,6 @@ const Main = () => {
                     <Route path="/verifyotp/:codenumber" element={<Verifyotp />} />
                     <Route path="/terms&conditions" element={<Terms />} />
                     <Route path="/dashboard/:username/:receiver?" element={<App />} />
-                    <Route path="/Resetpass/:usermail" element={<Resetpass />} />
                     <Route path="*" element={<Pagenotfound />} />
                   </Routes>
                 </BrowserRouter>

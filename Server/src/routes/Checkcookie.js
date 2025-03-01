@@ -9,7 +9,7 @@ router.get('/checkcookie', async (req, res) => {
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const user = await User.findOne({ email: decoded.email });
-        if(decoded.passwordversion !== user.passwordversion) return res.json({ message: "Unauthorized" });
+        if(decoded.email !== user.email) return res.json({ message: "Unauthorized" });
         res.json({ message: "Protected content", username: user.username });
     } catch (error) {
         res.status(500).send('Error : ' + error.message);

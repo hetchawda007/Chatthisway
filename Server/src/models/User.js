@@ -45,10 +45,6 @@ const userSchema = new Schema({
     description: {
         type: String,
         default: 'I love to chat this way'
-    },
-    passwordversion: {
-        type: Number,
-        default: 1
     }
 }, { timestamps: true });
 
