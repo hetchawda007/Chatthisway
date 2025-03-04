@@ -17,6 +17,14 @@ A **private and secure** real-time chat application with **end-to-end encryption
 
 ## 🔧 Installation & Setup (Add your own environment variables)  
 
+## App Dashboard
+
+![work-5](https://github.com/user-attachments/assets/9ed3ccf3-eb18-4b2d-b9b6-fc7ca7bcfc43)
+
+## 🛠 Live Url
+
+[https://tipmeatreat.vercel.app](https://chatthisway.vercel.app/)
+
 ### 1️⃣ Clone the repository  
 ```sh
 git clone https://github.com/yourusername/secure-chat-app.git
