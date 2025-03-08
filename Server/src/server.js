@@ -30,7 +30,7 @@ await connectDB();
 
 app.use(cookieParser())
 app.use(cors({
-  origin: process.env.CLIENT_URL, // Ensure this matches your Vercel frontend
+  origin: process.env.CLIENT_URL,
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization"],
