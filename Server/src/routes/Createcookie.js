@@ -14,9 +14,9 @@ router.post('/createcookie', async (req, res) => {
         );
         res.cookie("token", token, {
             httpOnly: true,
-            secure: true, // Must be true since "sameSite: none"
-            sameSite: "none", // Required for cross-origin cookies
-            maxAge: 60 * 60 * 24 * 7 * 1000, // 7 days
+            secure: true, 
+            sameSite: "none",
+            maxAge: 30 * 24 * 60 * 60 * 1000, 
         });
         console.log(token);
         res.json({ message: "Login successful" });

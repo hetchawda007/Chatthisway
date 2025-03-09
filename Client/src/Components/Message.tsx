@@ -22,7 +22,7 @@ const Message: React.FC<MessageComponentProps> = ({ message }) => {
     const { username } = useParams();
     return (
         <>
-            <div className={`flex w-[70%] ${message.sender === username ? 'justify-end' : 'justify-start'}`}>
+            <div className={`flex w-[70%] ${message.sender === username ? 'justify-end' : 'justify-start'} max-md:w-[90%]`}>
                 <div className={`bg-purple-200 text-wrap bg-gradient-to-r from-purple-700 via-purple-600 to-purple-700 p-2 rounded-lg shadow-md flex items-end ${message.message.encryptedmessage.length > 70 ? 'w-[70%]' : 'w-fit'}`}>
                     <span className="text-white pr-2 break-words whitespace-pre-wrap overflow-hidden w-full">
                         {message.message.encryptedmessage}

@@ -4,7 +4,6 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import './index.css';
 import App from './App.tsx';
 import Home from './pages/Home.tsx';
-import Terms from './pages/Terms.tsx';
 import Verifyotp from './pages/Verifyotp.tsx';
 import SignupContext from './Context/Signupcontext.ts';
 import LoginContext from './Context/Logincontext.ts';
@@ -13,8 +12,10 @@ import Loginwithrecaptcha from './Components/Loginwithrecaptcha.tsx';
 import Signupwithrecaptcha from './Components/Signupwithrecaptcha.tsx';
 import Pagenotfound from './Components/Pagenotfound.tsx';
 import Userscontext from './Context/Userscontext.ts';
+import inmobileContext from './Context/Inmobile.ts';
 import Userdata from './Context/Userdata.ts';
 import Chatusers from './Context/Chatusers.ts';
+import Hideelement from './Context/Hideelement.ts';
 
 const Main = () => {
   interface credentials {
@@ -47,6 +48,8 @@ const Main = () => {
   const [Credentials, setCredentials] = useState<credentials>({ email: '', username: '', password: '', repeatPassword: '', fname: '' });
   const [Usermail, setUsermail] = useState('');
   const [code, setCode] = useState('564751');
+  const [inmobile, setInmobile] = useState(false);
+  const [hideelement, setHideelement] = useState(false);
   const [users, setUsers] = useState<users[]>([]);
   const [userdata, setUserdata] = useState({
     email: '', username: '', password: '', repeatPassword: '', fname: '', description: '', signatureprivatekey: '', signaturepublickey: '', cryptoprivatekey: '', cryptopublickey: '', gender: ''
@@ -60,17 +63,20 @@ const Main = () => {
           <Code.Provider value={{ code: code, setCode }}>
             <Userdata.Provider value={{ user: userdata, setUser: setUserdata }}>
               <Chatusers.Provider value={{ chatusers: chatusers, setchatusers: setchatusers }}>
-                <BrowserRouter>
-                  <Routes>
-                    <Route path="/" element={<Home />} />
-                    <Route path="/login" element={<Loginwithrecaptcha />} />
-                    <Route path="/signup" element={<Signupwithrecaptcha />} />
-                    <Route path="/verifyotp/:codenumber" element={<Verifyotp />} />
-                    <Route path="/terms&conditions" element={<Terms />} />
-                    <Route path="/dashboard/:username/:receiver?" element={<App />} />
-                    <Route path="*" element={<Pagenotfound />} />
-                  </Routes>
-                </BrowserRouter>
+                <inmobileContext.Provider value={{ inmobile, setInmobile }}>
+                  <Hideelement.Provider value={{ hideelemenmt: hideelement, setHideelement }}>
+                    <BrowserRouter>
+                      <Routes>
+                        <Route path="/" element={<Home />} />
+                        <Route path="/login" element={<Loginwithrecaptcha />} />
+                        <Route path="/signup" element={<Signupwithrecaptcha />} />
+                        <Route path="/verifyotp/:codenumber" element={<Verifyotp />} />
+                        <Route path="/dashboard/:username/:receiver?" element={<App />} />
+                        <Route path="*" element={<Pagenotfound />} />
+                      </Routes>
+                    </BrowserRouter>
+                  </Hideelement.Provider>
+                </inmobileContext.Provider>
               </Chatusers.Provider>
             </Userdata.Provider>
           </Code.Provider>

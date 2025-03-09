@@ -12,6 +12,8 @@ import { io } from "socket.io-client"
 import nacl from "tweetnacl";
 import naclUtil from "tweetnacl-util";
 import Chatusers from './Context/Chatusers'
+import inmobileContext from './Context/Inmobile'
+import Hideelement from './Context/Hideelement'
 
 interface encryptedMessageProps {
   encryptedmessage: string,
@@ -52,18 +54,15 @@ interface newMessageProps {
   cryptopublickey: string
 }
 
-interface encryptedMessageProps {
-  encryptedmessage: string,
-  iv: string,
-}
-
 function App() {
 
   const Users = useContext(Userscontext)
   const [profiledata, setProfiledata] = useState({ fname: '', description: '', gender: '' })
   const keypair = useRef({ cryptokey: '', signinkey: '' })
   const signaturepublickey = useRef('')
+  const inmobile = useContext(inmobileContext)
   const userdata = useContext(Userdata)
+  const hideelement = useContext(Hideelement)
   const { username } = useParams()
   const { receiver } = useParams()
   const Navigate = useNavigate()
@@ -96,8 +95,7 @@ function App() {
       { name: "AES-GCM" },
       false,
       ["decrypt"]
-    );
-
+    )
     const decrypted = await window.crypto.subtle.decrypt(
       { name: "AES-GCM", iv: naclUtil.decodeBase64(iv) },
       key,
@@ -117,10 +115,6 @@ function App() {
   const processMessage = async (message: chatusersprops) => {
 
     const sharedKey = deriveSharedSecret(keypair.current.cryptokey, message.cryptopublickey);
-    if (!sharedKey) {
-      console.error('Failed to derive shared key');
-      return;
-    }
     const decryptedmessage = await decryptMessage(message.lastmessage.encryptedmessage, message.lastmessage.iv, sharedKey);
     const verifiedMessage = verifyMessage(decryptedmessage, message.signaturepublickey);
     if (!verifiedMessage) {
@@ -154,6 +148,15 @@ function App() {
   }
 
   useEffect(() => {
+    console.log(inmobile);
+  }, [inmobile])
+
+  useEffect(() => {
+
+    if (window.innerWidth < 768) {
+      inmobile?.setInmobile(true);
+    }
+
     const check = async () => {
       const res = await checkcookie()
       if (res.message !== 'Protected content') {
@@ -214,28 +217,59 @@ function App() {
   }, [])
 
   useEffect(() => {
-    if (!receiver) return
-    socket?.on("receive_message", async (message: newMessageProps) => {
-      if (message.sender !== receiver) return
+
+    const handleReceiveMessage = async (message: newMessageProps) => {
+      console.log(message);
       const sharedKey = deriveSharedSecret(keypair.current.cryptokey, message.cryptopublickey);
       const decryptedmessage = await decryptMessage(message.message.encryptedmessage, message.message.iv, sharedKey);
       const verifiedMessage = verifyMessage(decryptedmessage, message.signaturepublickey);
       if (!verifiedMessage) return console.log('unverified');
-      if (message.sender === receiver) {
-        chatuser?.setchatusers((prevMessages) =>
-          prevMessages.map((chatUser) =>
-            chatUser.username === message.sender
-              ? {
-                ...chatUser,
-                lastmessage: { encryptedmessage: verifiedMessage, iv: message.message.iv },
-                messagecount: chatUser.messagecount + 1,
-              }
-              : chatUser
-          )
-        );
+
+      console.log(chatuser?.chatusers);
+      const senderExists = chatuser?.chatusers.some(chatUser => chatUser.username === message.sender);
+      console.log(senderExists);
+
+      if (!senderExists || chatuser?.chatusers.length === 0) {
+        chatuser?.setchatusers((prevMessages) => [
+          ...prevMessages,
+          {
+            username: username === message.sender ? message.receiver : message.sender,
+            lastmessage: { encryptedmessage: verifiedMessage, iv: message.message.iv },
+            date: new Date().toLocaleDateString('en-US', {
+              month: 'numeric',
+              day: 'numeric',
+              year: '2-digit'
+            }),
+            signaturepublickey: message.signaturepublickey,
+            cryptopublickey: message.cryptopublickey,
+            messagecount: 1
+          }
+        ]);
+        return;
       }
-    });
-  }, [receiver])
+      if (receiver) {
+        if (message.sender === username || message.sender === receiver) return;
+      }
+
+      chatuser?.setchatusers((prevMessages) =>
+        prevMessages.map((chatUser) =>
+          chatUser.username === message.sender
+            ? {
+              ...chatUser,
+              lastmessage: { encryptedmessage: verifiedMessage, iv: message.message.iv },
+              messagecount: chatUser.messagecount + 1,
+            }
+            : chatUser
+        )
+      );
+    };
+
+    socket?.on("receive_message", handleReceiveMessage);
+
+    return () => {
+      socket?.off("receive_message", handleReceiveMessage);
+    };
+  }, [username, socket, receiver, chatuser])
 
   useEffect(() => {
     const func = async () => {
@@ -246,17 +280,39 @@ function App() {
       })
       signaturepublickey.current = user.data.signaturepublickey
       const users = await axios.post(`${import.meta.env.VITE_SERVER_URL}/api/getmessages`, { username: username })
+      console.log(users);
       const setdata = async () => {
-        for (const user of users.data) {
-          const room = [username, user.username].sort().join('_')
-          socket?.emit("join_room", room, username)
-          processMessage(user)
+        if (users.data.length > 0) {
+          for (const user of users.data) {
+            const room = [username, user.username].sort().join('_')
+            socket?.emit("join_room", room, username)
+            processMessage(user)
+          }
         }
       }
       await setdata()
     }
     func()
+
   }, [username])
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleNewChat = (room: string, receiver: string) => {
+      console.log(room, receiver, username);
+      if (receiver === username) {
+        socket.emit("join_room", room, username);
+      }
+    };
+
+    socket.on("new_chat", handleNewChat);
+
+    return () => {
+      socket.off("new_chat", handleNewChat);
+    };
+
+  }, [socket, username]);
 
   const handlechange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>): void => {
     const { name, value } = e.target;
@@ -310,6 +366,9 @@ function App() {
     setProfilevisibility(false)
     setSearch(false)
     Navigate(`/dashboard/${username}/${user.username}`)
+    if (inmobile?.inmobile) {
+      hideelement?.setHideelement(true)
+    }
   }
 
   const handlelogout = async () => {
@@ -351,7 +410,7 @@ function App() {
       />
       <div className="container mx-auto flex h-screen">
 
-        <div className='w-[25%] overflow-y-auto min-h-full bg-gradient-to-t from-[#1a1a1a] via-[#272727] to-[#313131]'>
+        <div className={`w-[25%] overflow-y-auto min-h-full bg-gradient-to-t from-[#1a1a1a] via-[#272727] to-[#313131] max-md:w-full ${hideelement?.hideelemenmt ? 'hidden size-0' : ''}`}>
 
           <div className='flex mb-4 items-center gap-4 justify-center pt-3 pl-3'>
             <div>

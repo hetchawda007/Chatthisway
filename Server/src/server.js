@@ -80,9 +80,9 @@ io.on("connection", (socket) => {
     console.log(username + " seen the message in room: " + room);
     socket.to(room).emit("message_status", room, username);
   })
-  socket.on("isinchat", (room, username) => {
-    console.log(username + " is in chat room: " + room);
-    socket.to(room).emit("isin_chat", room, username);
+  socket.on("isinchat", (room, receiver) => {
+    console.log(receiver + " is in chat room: " + room);
+    socket.to(room).emit("isin_chat", room, receiver);
   })
   socket.on("disconnect", () => {
     console.log("User disconnected", socket.id);
@@ -91,6 +91,11 @@ io.on("connection", (socket) => {
     console.log(username + " is " + status);
     socket.broadcast.emit("user_status", username, status);
   })
+  socket.on("new_chat", (room, receiver) => {
+    console.log("new chat room: " + room + " with " + receiver);
+    socket.broadcast.emit("new_chat", room, receiver);
+  })
+
 })
 
 app.get('/', (req, res) => {

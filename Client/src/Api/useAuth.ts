@@ -6,15 +6,30 @@ const API = axios.create({
 });
 
 export const createcookie = async (usermail: string) => {
-    const res = await API.post("/createcookie", { usermail: usermail });
-    return res.data.message;
+    try {
+        const res = await API.post("/createcookie", { usermail: usermail });
+        return res.data.message;
+    } catch (error) {
+        console.error("Error creating cookie:", error);
+        throw error;
+    }
 };
 
 export const checkcookie = async () => {
-    const res = await API.get("/checkcookie");
-    return res.data;
+    try {
+        const res = await API.get("/checkcookie");
+        return res.data;
+    } catch (error) {
+        console.error("Error checking cookie:", error);
+        return null;
+    }
 };
 
 export const deletecookie = async () => {
-    await API.post("/deletecookie");
+    try {
+        await API.post("/deletecookie");
+    } catch (error) {
+        console.error("Error deleting cookie:", error);
+        throw error;
+    }
 };
