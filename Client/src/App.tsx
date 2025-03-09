@@ -458,7 +458,7 @@ function App() {
           </div>
 
 
-          {search && <motion.div className="max-w-md px-3 pt-3 m-4 bg-white border border-gray-200 rounded-xl shadow-sm sm:px-6 sm:pt-6 dark:bg-gray-800 dark:border-gray-700"
+          {search && <motion.div className="max-w-md px-3 pt-3 m-4 bg-white border border-gray-200 rounded-xl shadow-sm sm:px-6 sm:pt-6 dark:bg-gray-800 dark:border-gray-700 mx-auto max-md:w-[90%]"
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.5, ease: 'easeInOut' }}
@@ -469,7 +469,7 @@ function App() {
               </div>
             </div>
             <div className="flow-root">
-              <ul role="list" className="divide-y divide-gray-200 dark:divide-gray-700">
+              <ul role="list" className="divide-y divide-gray-200 dark:divide-gray-700 flex flex-col">
                 {users.map((user) => {
                   return (
                     <li key={user.username} className="py-3 sm:py-4">
