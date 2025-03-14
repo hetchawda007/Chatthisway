@@ -5,6 +5,7 @@ import connectDB from './config/db.js';
 import cors from "cors"
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
+import verifyToken from './middleware/authMiddleware.js';
 import Createuser from "./routes/Createuser.js";
 import Usermail from "./routes/Usermail.js";
 import auth from "./routes/Auth.js";
@@ -34,27 +35,31 @@ app.use(cors({
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization"],
+  exposedHeaders: ["set-cookie"]
 }));
-app.use(express.json());
+app.use(express.json({ limit: '30kb' }));
 
-app.use('/api', Createuser);
-app.use('/api', auth);
-app.use('/api', Usermail);
-app.use('/api', Getpass);
-app.use('/api', Getemail);
-app.use('/api', Updatepass);
-app.use('/api', Verifyrecaptcha);
-app.use('/api', Createcookie);
-app.use('/api', Getcryptokeys);
-app.use('/api', Checkcookie);
-app.use('/api', Deletecookie);
-app.use('/api', Getusers);
-app.use('/api', Userdata);
-app.use('/api', Updateprofile);
-app.use('/api', Setisonline);
-app.use('/api', Savemessage);
-app.use('/api', Getmessages);
-app.use('/api', Setstatus);
+// Public routes that don't need authentication
+app.use('/api/v1', auth);
+app.use('/api/v1', Verifyrecaptcha);
+app.use('/api/v1', Checkcookie);
+app.use('/api/v1', Deletecookie);
+app.use('/api/v1', Createuser);
+app.use('/api/v1', Createcookie);
+app.use('/api/v1', Getpass);
+
+// Protected routes that need authentication
+app.use('/api/v1', verifyToken, Usermail);
+app.use('/api/v1', verifyToken, Getemail);
+app.use('/api/v1', verifyToken, Updatepass);
+app.use('/api/v1', verifyToken, Getcryptokeys);
+app.use('/api/v1', verifyToken, Getusers);
+app.use('/api/v1', verifyToken, Userdata);
+app.use('/api/v1', verifyToken, Updateprofile);
+app.use('/api/v1', verifyToken, Setisonline);
+app.use('/api/v1', verifyToken, Savemessage);
+app.use('/api/v1', verifyToken, Getmessages);
+app.use('/api/v1', verifyToken, Setstatus);
 
 const server = createServer(app);
 
@@ -70,29 +75,23 @@ io.on("connection", (socket) => {
   console.log("User connected", socket.id);
   socket.on("join_room", (room, username) => {
     socket.join(room);
-    console.log(username + " joined room: " + room);
   })
   socket.on("send_message", async ({ message, room }) => {
-    console.log(message);
     socket.to(room).emit("receive_message", message);
   })
   socket.on("seen_message", (room, username) => {
-    console.log(username + " seen the message in room: " + room);
     socket.to(room).emit("message_status", room, username);
   })
   socket.on("isinchat", (room, receiver) => {
-    console.log(receiver + " is in chat room: " + room);
     socket.to(room).emit("isin_chat", room, receiver);
   })
   socket.on("disconnect", () => {
     console.log("User disconnected", socket.id);
   })
   socket.on("user_status", (username, status) => {
-    console.log(username + " is " + status);
     socket.broadcast.emit("user_status", username, status);
   })
   socket.on("new_chat", (room, receiver) => {
-    console.log("new chat room: " + room + " with " + receiver);
     socket.broadcast.emit("new_chat", room, receiver);
   })
 

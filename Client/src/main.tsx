@@ -16,6 +16,7 @@ import inmobileContext from './Context/Inmobile.ts';
 import Userdata from './Context/Userdata.ts';
 import Chatusers from './Context/Chatusers.ts';
 import Hideelement from './Context/Hideelement.ts';
+import 'react-loading-skeleton/dist/skeleton.css'
 
 const Main = () => {
   interface credentials {

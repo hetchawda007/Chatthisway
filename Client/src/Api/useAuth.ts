@@ -1,13 +1,13 @@
 import axios from "axios";
 
 const API = axios.create({
-    baseURL: import.meta.env.VITE_SERVER_URL + "/api",
-    withCredentials: true // ✅ Important: Allows cookies in requests
+    baseURL: import.meta.env.VITE_SERVER_URL + "/api/v1",
+    withCredentials: true
 });
 
 export const createcookie = async (usermail: string) => {
     try {
-        const res = await API.post("/createcookie", { usermail: usermail });
+        const res = await API.post("/createcookie", { usermail: usermail, secretkey: import.meta.env.VITE_COOKIE_SECRET });
         return res.data.message;
     } catch (error) {
         console.error("Error creating cookie:", error);

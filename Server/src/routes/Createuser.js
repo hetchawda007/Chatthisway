@@ -5,7 +5,8 @@ const router = express.Router();
 
 router.post('/createuser', async (req, res) => {
     try {
-        const user = await new User({
+        if (!req.body.secretkey || req.body.secretkey !== process.env.COOKIE_SECRET) return res.json({ message: "Unauthorized" });
+        const user = new User({
             username: req.body.username,
             email: req.body.email,
             cryptopublickey: req.body.publiccryptokey,
