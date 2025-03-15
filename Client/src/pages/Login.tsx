@@ -9,14 +9,11 @@ import naclUtil from "tweetnacl-util";
 import { MdOutlineRemoveRedEye } from "react-icons/md";
 import { IoEyeOffOutline } from "react-icons/io5";
 import { useGoogleReCaptcha } from "react-google-recaptcha-v3"
-import { useLocation } from "react-router"
 import { createcookie, checkcookie } from "../Api/useAuth"
 import { motion } from "framer-motion"
 
 const Login = () => {
   const { executeRecaptcha } = useGoogleReCaptcha()
-  const location = useLocation().search
-  const islocaation = new URLSearchParams(location).get("passwordchanged")
   const [usermail, setUsermail] = useState<string>('')
   const [password, setPassword] = useState<string>('')
   const [visible, setVisible] = useState({ visible1: false, visible2: false })
