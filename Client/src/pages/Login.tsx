@@ -39,19 +39,6 @@ const Login = () => {
       }
     }
     checkuser()
-    if (islocaation === 'true') {
-      toast.success('Password updated Successfully', {
-        position: "bottom-center",
-        autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: false,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "dark",
-      });
-      Navigate('/login')
-    }
   }, [])
 
   const handlechange = () => {
