@@ -164,10 +164,13 @@ const Chat = () => {
 
             if (!receiver) {
                 setIsuser(false)
+                if(inmobile?.inmobile){
+                    hideelement?.setHideelement(false)
+                }
                 return
             };
 
-            setLoading(true); // Start loading
+            setLoading(true);
 
             const chechuser = await axios.post(`${import.meta.env.VITE_SERVER_URL}/api/v1/auth`, { usermail: receiver }, { withCredentials: true })
             if (!chechuser.data.result) {
@@ -194,12 +197,11 @@ const Chat = () => {
                 socket?.emit("new_chat", roomname, receiver)
             }
 
-            // Process messages with a small delay to show skeleton loading
             setTimeout(() => {
                 messages.data.forEach(async (message: MessageProps) => {
                     await processMessage(message);
                 });
-                setLoading(false); // End loading
+                setLoading(false);
             }, 800);
 
             socket?.emit("join_room", roomname, username)
@@ -345,11 +347,12 @@ const Chat = () => {
     }
 
     const handleback = () => {
-        setIsuser(false)
-        hideelement?.setHideelement(false)
+        if (window.innerWidth > 768) {
+            hideelement?.setHideelement(false)
+            setIsuser(false)
+        }
         Navigate(`/dashboard/${username}`)
     }
-
     return (
         <>
             {isuser ? (
@@ -389,7 +392,7 @@ const Chat = () => {
                                     ></motion.span>
                                 ) : (
                                     <motion.span
-                                        initial={{ scale: 0 }}  
+                                        initial={{ scale: 0 }}
                                         animate={{ scale: 1 }}
                                         className="top-0 left-8 absolute w-4 h-4 bg-red-500 border-2 border-[#1a1a2a] rounded-full"
                                     ></motion.span>
@@ -460,7 +463,7 @@ const Chat = () => {
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ duration: 0.3, delay: index * 0.1 }}
                                         >
-                                            <div className="flex flex-col p-1.5">   
+                                            <div className="flex flex-col p-1.5">
                                                 <Skeleton width={200 + Math.random() * 100} height={16} />
                                                 <div className="flex justify-end mt-1">
                                                     <Skeleton width={40} height={12} />
@@ -540,43 +543,43 @@ const Chat = () => {
                         >
                             <div className="relative">
                                 <svg className="w-32 h-32 text-indigo-400" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path 
-                                        d="M12 22C12 22 20 18 20 12V5L12 2L4 5V12C4 18 12 22 12 22Z" 
-                                        stroke="currentColor" 
-                                        strokeWidth="1.5" 
-                                        strokeLinecap="round" 
+                                    <path
+                                        d="M12 22C12 22 20 18 20 12V5L12 2L4 5V12C4 18 12 22 12 22Z"
+                                        stroke="currentColor"
+                                        strokeWidth="1.5"
+                                        strokeLinecap="round"
                                         strokeLinejoin="round"
-                                        fill="rgba(79, 70, 229, 0.1)" 
+                                        fill="rgba(79, 70, 229, 0.1)"
                                     />
-                                     
-                                    <rect 
-                                        x="8" 
-                                        y="11" 
-                                        width="8" 
-                                        height="6" 
-                                        rx="1" 
-                                        fill="currentColor" 
-                                        fillOpacity="0.4" 
-                                        stroke="currentColor" 
-                                        strokeWidth="1.5" 
+
+                                    <rect
+                                        x="8"
+                                        y="11"
+                                        width="8"
+                                        height="6"
+                                        rx="1"
+                                        fill="currentColor"
+                                        fillOpacity="0.4"
+                                        stroke="currentColor"
+                                        strokeWidth="1.5"
                                     />
-                                    
-                                
-                                    <path 
-                                        d="M9.5 11V8C9.5 6.89543 10.3954 6 11.5 6H12.5C13.6046 6 14.5 6.89543 14.5 8V11" 
-                                        stroke="currentColor" 
-                                        strokeWidth="1.5" 
-                                        strokeLinecap="round" 
+
+
+                                    <path
+                                        d="M9.5 11V8C9.5 6.89543 10.3954 6 11.5 6H12.5C13.6046 6 14.5 6.89543 14.5 8V11"
+                                        stroke="currentColor"
+                                        strokeWidth="1.5"
+                                        strokeLinecap="round"
                                     />
-                                    
-                               
+
+
                                     <path d="M9 14.5H15" stroke="white" strokeOpacity="0.6" strokeWidth="0.75" strokeLinecap="round" />
                                     <path d="M9 16H15" stroke="white" strokeOpacity="0.6" strokeWidth="0.75" strokeLinecap="round" />
-                                    
+
                                     <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="0.5" strokeOpacity="0.2" />
                                 </svg>
-                                
-                             
+
+
                                 <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full animate-ping opacity-75 duration-1000"></div>
                                 <div className="absolute -bottom-1 -left-1 w-3 h-3 bg-indigo-500 rounded-full animate-pulse"></div>
                             </div>

@@ -210,7 +210,7 @@ function App() {
       }
       setTimeout(() => {
         setInitialLoadingComplete(true);
-      }, 2000); // 2 seconds delay to show skeleton first, then the empty state
+      }, 2000); 
     }
     check()
 
@@ -433,7 +433,7 @@ function App() {
                   transition={{ type: "spring", stiffness: 300 }}
                 >
                   <div className="px-5 cursor-default py-3 text-sm text-gray-100">
-                    <div className="font-bold">{userdata?.user.username}</div>
+                    <div className="font-bold truncate max-w-[160px]">{userdata?.user.username}</div>
                     <div className="font-medium text-indigo-300 truncate">{userdata?.user.email}</div>
                   </div>
                   <ul className="py-2 text-sm text-gray-200" aria-labelledby="avatarButton">
@@ -507,7 +507,6 @@ function App() {
             </form>
           </div>
 
-          {/* Skeleton Loading - Only show during initial loading and when there are no chats */}
           {!search && !profilevisibility && chatuser?.chatusers.length === 0 && !initialLoadingComplete && (
             <div className="px-4">
               <SkeletonTheme baseColor="#202020" highlightColor="#444">
@@ -538,7 +537,6 @@ function App() {
             </div>
           )}
 
-          {/* No Chats Message - Only show when initial loading is complete and there are no chats */}
           {!search && !profilevisibility && chatuser?.chatusers.length === 0 && initialLoadingComplete && (
             <motion.div
               className="flex flex-col items-center justify-center p-6 mt-6 mx-4 bg-[#252540]/30 rounded-xl border border-[#404060]/30"
@@ -710,19 +708,27 @@ function App() {
                 ></motion.span>
               </motion.div>
 
-              <motion.div
-                className='text-3xl text-indigo-100 font-bold mt-4'
+                <motion.div 
+                className='text-center w-full mt-4 px-2'
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-              >{userdata?.user.username}</motion.div>
+                >
+                <h2 className='text-2xl sm:text-3xl text-indigo-100 font-bold overflow-hidden text-ellipsis'>
+                  {userdata?.user.username}
+                </h2>
+                </motion.div>
 
-              <motion.div
-                className='text-lg text-indigo-300 font-medium mb-6'
+                <motion.div
+                className='text-center w-full mb-6 px-3'
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-              >{userdata?.user.email}</motion.div>
+                >
+                <p className='text-base sm:text-lg text-indigo-300 font-medium overflow-hidden text-ellipsis'>
+                  {userdata?.user.email}
+                </p>
+                </motion.div>
 
               <motion.form
                 onSubmit={profilesubmit}
