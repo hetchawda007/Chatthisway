@@ -15,6 +15,7 @@ import Chatusers from './Context/Chatusers'
 import inmobileContext from './Context/Inmobile'
 import Hideelement from './Context/Hideelement'
 import Skeleton, { SkeletonTheme } from 'react-loading-skeleton'
+import SEOHelmet from './Components/SEOHelmet'
 
 interface encryptedMessageProps {
   encryptedmessage: string,
@@ -210,7 +211,7 @@ function App() {
       }
       setTimeout(() => {
         setInitialLoadingComplete(true);
-      }, 2000); 
+      }, 2000);
     }
     check()
 
@@ -395,6 +396,12 @@ function App() {
 
   return (
     <>
+      <SEOHelmet
+        title={username ? `${username} (${userdata?.user.fname})` : 'Dashboard | ChatThisWay'}
+        description="Your secure messaging dashboard. View your conversations and connect with friends."
+        keywords="messaging dashboard, secure chat, real-time messaging, ChatThisWay"
+      />
+
       <ToastContainer
         position="bottom-center"
         autoClose={3000}
@@ -708,27 +715,27 @@ function App() {
                 ></motion.span>
               </motion.div>
 
-                <motion.div 
+              <motion.div
                 className='text-center w-full mt-4 px-2'
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                >
+              >
                 <h2 className='text-2xl sm:text-3xl text-indigo-100 font-bold overflow-hidden text-ellipsis'>
                   {userdata?.user.username}
                 </h2>
-                </motion.div>
+              </motion.div>
 
-                <motion.div
+              <motion.div
                 className='text-center w-full mb-6 px-3'
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                >
+              >
                 <p className='text-base sm:text-lg text-indigo-300 font-medium overflow-hidden text-ellipsis'>
                   {userdata?.user.email}
                 </p>
-                </motion.div>
+              </motion.div>
 
               <motion.form
                 onSubmit={profilesubmit}

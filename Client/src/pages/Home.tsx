@@ -2,6 +2,7 @@ import { useNavigate } from "react-router";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { checkcookie } from "../Api/useAuth";
+import SEOHelmet from "../Components/SEOHelmet";
 
 const Home = () => {
     const navigate = useNavigate();
@@ -69,6 +70,13 @@ const Home = () => {
 
     return (
         <div className="landing-page min-h-screen bg-purple-100 text-gray-800">
+            <SEOHelmet
+                title="ChatThisWay | Secure Messaging Platform"
+                description="Connect and chat like never before with our secure, real-time messaging platform. Experience seamless communication with friends, family, and colleagues."
+                keywords="chat app, secure messaging, end-to-end encryption, real-time chat, ChatThisWay"
+                ogTitle="ChatThisWay - Modern Secure Messaging"
+                ogDescription="A modern messaging platform with end-to-end encryption, real-time chat, and beautiful UI/UX."
+            />
             <header className={`fixed w-full z-50 transition-all duration-300 ${isScrolled
                 ? 'bg-purple-900 shadow-lg py-2'
                 : 'bg-transparent py-4'
@@ -538,14 +546,14 @@ const Home = () => {
                             variants={staggerContainer}
                             className="max-w-4xl mx-auto"
                         >
-                            <motion.h3 
-                                variants={slideUp} 
+                            <motion.h3
+                                variants={slideUp}
                                 className="text-2xl font-bold mb-10 text-center text-transparent bg-clip-text bg-gradient-to-r from-white to-purple-200"
                             >
                                 Built With Modern Tech Stack
                             </motion.h3>
 
-                            <motion.div 
+                            <motion.div
                                 variants={staggerContainer}
                                 className="grid grid-cols-2 md:grid-cols-4 gap-6"
                             >
@@ -574,7 +582,7 @@ const Home = () => {
                                     <motion.div
                                         key={index}
                                         variants={scaleIn}
-                                        whileHover={{ 
+                                        whileHover={{
                                             y: -8,
                                             backgroundColor: "rgba(139, 92, 246, 0.6)",
                                             transition: { duration: 0.2 }

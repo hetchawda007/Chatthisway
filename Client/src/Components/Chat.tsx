@@ -11,6 +11,7 @@ import Hideelement from "../Context/Hideelement";
 import { motion } from 'framer-motion'
 import Skeleton, { SkeletonTheme } from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
+import SEOHelmet from "./SEOHelmet";
 
 interface encryptedMessageProps {
     encryptedmessage: string,
@@ -164,8 +165,8 @@ const Chat = () => {
 
             if (!receiver) {
                 setIsuser(false)
-                if(inmobile?.inmobile){
-                    hideelement?.setHideelement(false)
+                if (inmobile?.inmobile === true) {
+                    inmobile?.setInmobile(false)
                 }
                 return
             };
@@ -347,12 +348,11 @@ const Chat = () => {
     }
 
     const handleback = () => {
-        if (window.innerWidth > 768) {
-            hideelement?.setHideelement(false)
-            setIsuser(false)
-        }
+        setIsuser(false)
+        hideelement?.setHideelement(false)
         Navigate(`/dashboard/${username}`)
     }
+
     return (
         <>
             {isuser ? (
@@ -362,6 +362,12 @@ const Chat = () => {
                     animate={{ opacity: 1 }}
                     transition={{ duration: 0.3 }}
                 >
+                    <SEOHelmet
+                        title={`Chat with ${receiverdetails.username} | ChatThisWay`}
+                        description="Secure, end-to-end encrypted private conversation."
+                        keywords="private chat, secure messaging, end-to-end encryption"
+                    />
+
                     <div className="px-2 flex sticky top-0 z-20 items-center bg-gradient-to-r w-full p-3 from-[#1a1a2a] via-[#252540] to-[#1a1a2a] shadow-md">
                         <motion.button
                             onClick={handleback}
@@ -529,6 +535,7 @@ const Chat = () => {
                     animate={{ opacity: 1 }}
                     transition={{ duration: 0.5 }}
                 >
+
                     <motion.div
                         className="max-w-xl text-center px-6 py-8"
                         initial={{ y: 20, opacity: 0 }}

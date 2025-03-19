@@ -17,6 +17,7 @@ import Userdata from './Context/Userdata.ts';
 import Chatusers from './Context/Chatusers.ts';
 import Hideelement from './Context/Hideelement.ts';
 import 'react-loading-skeleton/dist/skeleton.css'
+import { HelmetProvider } from 'react-helmet-async';
 
 const Main = () => {
   interface credentials {
@@ -66,16 +67,18 @@ const Main = () => {
               <Chatusers.Provider value={{ chatusers: chatusers, setchatusers: setchatusers }}>
                 <inmobileContext.Provider value={{ inmobile, setInmobile }}>
                   <Hideelement.Provider value={{ hideelemenmt: hideelement, setHideelement }}>
-                    <BrowserRouter>
-                      <Routes>
-                        <Route path="/" element={<Home />} />
-                        <Route path="/login" element={<Loginwithrecaptcha />} />
-                        <Route path="/signup" element={<Signupwithrecaptcha />} />
-                        <Route path="/verifyotp/:codenumber" element={<Verifyotp />} />
-                        <Route path="/dashboard/:username/:receiver?" element={<App />} />
-                        <Route path="*" element={<Pagenotfound />} />
-                      </Routes>
-                    </BrowserRouter>
+                    <HelmetProvider>
+                      <BrowserRouter>
+                        <Routes>
+                          <Route path="/" element={<Home />} />
+                          <Route path="/login" element={<Loginwithrecaptcha />} />
+                          <Route path="/signup" element={<Signupwithrecaptcha />} />
+                          <Route path="/verifyotp/:codenumber" element={<Verifyotp />} />
+                          <Route path="/dashboard/:username/:receiver?" element={<App />} />
+                          <Route path="*" element={<Pagenotfound />} />
+                        </Routes>
+                      </BrowserRouter>
+                    </HelmetProvider>
                   </Hideelement.Provider>
                 </inmobileContext.Provider>
               </Chatusers.Provider>

@@ -11,6 +11,7 @@ import Code from "../Context/Logincode";
 import Commonheader from "../Components/Commonheader";
 import { createcookie } from "../Api/useAuth"
 import { motion } from "framer-motion"
+import SEOHelmet from "../Components/SEOHelmet";
 
 const Verifyotp = () => {
     const { codenumber } = useParams();
@@ -26,7 +27,6 @@ const Verifyotp = () => {
         return Math.floor(100000 + Math.random() * 900000).toString();
     }, []);
 
-    // Handle OTP input change
     const handlechange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
         const value = e.target.value;
         if (/^[0-9]$/.test(value) || value === "") {
@@ -42,7 +42,6 @@ const Verifyotp = () => {
         }
     };
 
-    // Set up countdown timer for OTP resend
     useEffect(() => {
         let interval: ReturnType<typeof setInterval> | null = null;
         if (resendDisabled && timer > 0) {
@@ -98,7 +97,6 @@ const Verifyotp = () => {
         }
     };
 
-    // Handle resend OTP
     const handleResendOtp = async () => {
         if (!resendDisabled) {
             const success = await sendOtpToEmail();
@@ -157,7 +155,7 @@ const Verifyotp = () => {
 
         if (otp.join("") === sendotp.toString() && creadentials?.credentials.username !== "") {
             try {
-                // Generate key pairs for encryption and signing
+
                 const generateSigningKeyPair = async () => {
                     const keyPair = nacl.sign.keyPair();
                     return {
@@ -225,7 +223,6 @@ const Verifyotp = () => {
                     creadentials?.credentials.password || ""
                 );
 
-                // Store keys in IndexedDB
                 try {
                     const dbRequest = indexedDB.open("Credentials", 1);
                     dbRequest.onupgradeneeded = function () {
@@ -249,7 +246,6 @@ const Verifyotp = () => {
                     return;
                 }
 
-                // Create user on server
                 await axios.post(
                     `${import.meta.env.VITE_SERVER_URL}/api/v1/createuser`,
                     {
@@ -269,7 +265,6 @@ const Verifyotp = () => {
                     }
                 );
 
-                // Create cookie and navigate to dashboard
                 if (creadentials?.credentials.username) {
                     await createcookie(creadentials.credentials.username);
                     Navigate(`/dashboard/${creadentials?.credentials.username}`);
@@ -287,6 +282,13 @@ const Verifyotp = () => {
 
     return (
         <>
+            <SEOHelmet
+                title="Verify OTP | ChatThisWay"
+                description="Verify your identity with a one-time password to complete your secure ChatThisWay account setup."
+                keywords="verify OTP, authentication, secure messaging, two-factor authentication"
+                ogTitle="Verify Your ChatThisWay Account"
+                ogDescription="Complete your account verification with a secure one-time password."
+            />
             <ToastContainer
                 position="bottom-center"
                 autoClose={5000}
