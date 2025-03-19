@@ -1,4 +1,3 @@
-import { motion } from "framer-motion";
 import SEOHelmet from "./SEOHelmet";
 
 const Pagenotfound = () => {
