@@ -24,6 +24,7 @@ import Setisonline from "./routes/Setisonline.js"
 import Savemessage from "./routes/Savemessage.js"
 import Getmessages from "./routes/Getmessages.js"
 import Setstatus from "./routes/Setstatus.js"
+import limiter from './middleware/ratelimiterMiddleware.js';
 
 const app = express();
 dotenv.config();
@@ -38,6 +39,10 @@ app.use(cors({
   exposedHeaders: ["set-cookie"]
 }));
 app.use(express.json({ limit: '30kb' }));
+
+// Rate limiter middleware
+
+app.use('/api/v1', limiter);
 
 // Public routes that don't need authentication
 app.use('/api/v1', auth);
