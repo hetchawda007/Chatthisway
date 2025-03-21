@@ -607,7 +607,7 @@ const Chat = () => {
                             animate={{ y: 0, opacity: 1 }}
                             transition={{ delay: 0.5 }}
                         >
-                            Your personal messages and calls are secured with end-to-end encryption. This means that no one, not even ChatThisWay, can read or listen to them.
+                            Your personal messages are secured with end-to-end encryption. This means that no one, not even ChatThisWay, can read or listen to them.
                         </motion.p>
 
                         <motion.div
