@@ -83,6 +83,7 @@ io.on("connection", (socket) => {
   })
   socket.on("send_message", async ({ message, room }) => {
     socket.to(room).emit("receive_message", message);
+    console.log("Message sent to room:", room, "Message:", message);
   })
   socket.on("seen_message", (room, username) => {
     socket.to(room).emit("message_status", room, username);
