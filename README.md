@@ -33,7 +33,7 @@ password : Demouser@2
 
 ## 🛠 Live Url
 
-https://chatthisway.vercel.app
+[https://chatthisway.vercel.app](https://chatthisway.hetchawda.in/)
 
 ### 1️⃣ Clone the repository  
 ```sh
